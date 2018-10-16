@@ -9,8 +9,11 @@ By Anthony Kleine
 	saving this movie." Works on movies that make
 	use of Xtras such as Shockwave 3D Asset.
 
-	The Unprotector Xtra has been tested with
-	a number of Director versions from 8 - 12.
+	The Movie Restorer Xtra cannot decompile
+	Lingo Scripts, and `the scriptText` property
+	will be empty in opened movies. It has been
+	tested with a number of Director versions
+	from 8 - 12.
 
 	This Xtra is NOT Shockwave Safe.
 
@@ -33,4 +36,4 @@ Tested With
 
 
 Usage
-	In Director, go to Xtras > TOMYSSHADOW > Movie Restorer Tool 1.3.5
+	In Director, go to Xtras > TOMYSSHADOW > Movie Restorer Tool 1.3.5.
