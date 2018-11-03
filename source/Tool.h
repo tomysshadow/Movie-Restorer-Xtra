@@ -71,7 +71,7 @@ EXTERN_END_DEFINE_CLASS_INTERFACE
 
 
 
-inline bool stringSize(const char* string) {
+inline size_t stringSize(const char* string) {
 	return strlen(string) + 1;
 }
 
