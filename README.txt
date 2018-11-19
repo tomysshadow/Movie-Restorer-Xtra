@@ -1,4 +1,4 @@
-Movie Restorer Xtra 1.3.6
+Movie Restorer Xtra 1.3.7
 By Anthony Kleine
 
 	This Director Xtra allows Director to open and

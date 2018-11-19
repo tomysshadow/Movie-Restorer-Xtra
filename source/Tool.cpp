@@ -13,24 +13,11 @@ written permission of Adobe.
 
 #define INITGUID 1
 
-#include <windows.h>
-
 #include "tool.h"
 
-#include <string.h>
 #pragma function(strlen)
-#include <stdlib.h>
 #include "xclassver.h"
 #include "moatry.h"
-
-#include "driservc.h"
-#include "drivalue.h"
-
-#include "mmivalue.h"
-#include "mmillist.h"
-#include "mmiplist.h"
-#include "mmidate.h"
-#include "mmiclr.h"
 
 
 
@@ -123,7 +110,7 @@ STDMETHODIMP TStdXtra_IMoaRegister::Register(PIMoaCache pCache, PIMoaXtraEntryDi
 	ThrowErr(pCache->AddRegistryEntry(pXtraDict, &CLSID_TStdXtra, &IID_IMoaMmXTool, &pReg));
 
 	// register Standard Tool Entries
-	char* nameStr = "Movie Restorer Tool 1.3.6";
+	char* nameStr = "Movie Restorer Tool 1.3.7";
 	char* catStr = "TOMYSSHADOW";
 	MoaBoolParam alwaysEnabled = TRUE;
 

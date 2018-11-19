@@ -20,7 +20,6 @@ written permission of Adobe.
 
 #include "moastdif.h"
 #include "xmmvalue.h"
-#include "mmiutil.h"
 
 #include "mmixtool.h"
 
