@@ -110,7 +110,7 @@ STDMETHODIMP TStdXtra_IMoaRegister::Register(PIMoaCache pCache, PIMoaXtraEntryDi
 	ThrowErr(pCache->AddRegistryEntry(pXtraDict, &CLSID_TStdXtra, &IID_IMoaMmXTool, &pReg));
 
 	// register Standard Tool Entries
-	char* nameStr = "Movie Restorer Tool 1.3.7";
+	char* nameStr = "Movie Restorer Tool 1.3.8";
 	char* catStr = "TOMYSSHADOW";
 	MoaBoolParam alwaysEnabled = TRUE;
 
