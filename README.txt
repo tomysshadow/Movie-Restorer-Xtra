@@ -1,4 +1,4 @@
-Movie Restorer Xtra 1.3.8
+Movie Restorer Xtra 1.3.9
 By Anthony Kleine
 
 	This Director Xtra allows Director to open and
@@ -25,6 +25,7 @@ Tested With
 	-9.0.0.383
 	-10.0.0.188
 	-10.1.0.11
+	-10.1.1.16
 	-11.0.0.426
 	-11.0.3.466 (11 Hotfix 3)
 	-11.5.0.593
@@ -36,4 +37,4 @@ Tested With
 
 
 Usage
-	In Director, go to Xtras > TOMYSSHADOW > Movie Restorer Tool 1.3.5.
+	In Director, go to Xtras > TOMYSSHADOW > Movie Restorer Tool 1.3.9.
