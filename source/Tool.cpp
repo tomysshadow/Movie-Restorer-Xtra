@@ -69,7 +69,6 @@ STDMETHODIMP_(void) MoaDestroy_TStdXtra(TStdXtra* This) {
 	if (This->pMoaDrPlayerInterface) {
 		This->pMoaDrPlayerInterface->Release();
 	}
-
 	moa_catch
 	moa_catch_end
 	// we use moa_try_end_void instead of moa_try_end here since this method returns a void type
@@ -110,7 +109,7 @@ STDMETHODIMP TStdXtra_IMoaRegister::Register(PIMoaCache pCache, PIMoaXtraEntryDi
 	ThrowErr(pCache->AddRegistryEntry(pXtraDict, &CLSID_TStdXtra, &IID_IMoaMmXTool, &pReg));
 
 	// register Standard Tool Entries
-	char* nameStr = "Movie Restorer Tool 1.3.9";
+	char* nameStr = "Movie Restorer Tool 1.4.0";
 	char* catStr = "TOMYSSHADOW";
 	MoaBoolParam alwaysEnabled = TRUE;
 
@@ -123,7 +122,6 @@ STDMETHODIMP TStdXtra_IMoaRegister::Register(PIMoaCache pCache, PIMoaXtraEntryDi
 
 	// mark Xtra as Safe for Shockwave - but only if it IS safe (which it isn't)
 	//ThrowErr(pReg->Put(kMoaMmDictType_SafeForShockwave, &bItsSafe, sizeof(bItsSafe), kMoaMmDictKey_SafeForShockwave));
-
 	moa_catch
 	moa_catch_end
 	moa_try_end
@@ -229,7 +227,6 @@ MoaError TStdXtra_IMoaMmXTool::XToolExtender(PIMoaDrMovie pMoaDrMovieInterface) 
 		TerminateProcess(GetCurrentProcess(), 0);
 		Throw(kMoaErr_NoErr);
 	}
-
 	moa_catch
 	moa_catch_end
 	moa_try_end
@@ -264,7 +261,7 @@ struct ModuleDirectorVersionTest {
 	unsigned char* code;
 };
 
-MODULE_DIRECTOR_VERSION getModuleDirectorVersion(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface, HANDLE moduleHandle, const size_t MODULE_DIRECTOR_VERSION_TESTS_SIZE, ModuleDirectorVersionTest moduleDirectorVersionTests[]) {
+MODULE_DIRECTOR_VERSION getModuleDirectorVersion(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface, HMODULE moduleHandle, const size_t MODULE_DIRECTOR_VERSION_TESTS_SIZE, ModuleDirectorVersionTest moduleDirectorVersionTests[]) {
 	// performs a test to see if this is a supported Director version
 	// it's a simple array of bytes search, nothing more
 	// we support 8.5, 10 and 11.5, so we perform three tests
@@ -281,7 +278,7 @@ MODULE_DIRECTOR_VERSION getModuleDirectorVersion(PIMoaMmValue pMoaMmValueInterfa
 }
 
 bool extender(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface) {
-	HANDLE moduleHandle = GetModuleHandle("DIRAPI");
+	HMODULE moduleHandle = GetModuleHandle("DIRAPI");
 
 	// here is the first check that the Module Handle is valid
 	if (!moduleHandle) {
@@ -357,10 +354,12 @@ bool extender(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterfa
 				return false;
 			}
 		}
+
 		if (!extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x000726DE, (char*)moduleHandle + 0x00072724)) {
 			callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Extend Code");
 			return false;
 		}
+
 		codeExtended = extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x0006D3E4, (char*)moduleHandle + 0x0006D40A);
 		break;
 		case MODULE_DIRECTOR_85:
@@ -370,10 +369,12 @@ bool extender(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterfa
 				return false;
 			}
 		}
+
 		if (!extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x0005F406, (char*)moduleHandle + 0x0005F41C)) {
 			callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Extend Code");
 			return false;
 		}
+
 		codeExtended = extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x0005AF05, (char*)moduleHandle + 0x0005AF22);
 		break;
 		case MODULE_DIRECTOR_851:
@@ -383,10 +384,12 @@ bool extender(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterfa
 				return false;
 			}
 		}
+
 		if (!extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x0005F43F, (char*)moduleHandle + 0x0005F455)) {
 			callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Extend Code");
 			return false;
 		}
+
 		codeExtended = extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x0005AF3E, (char*)moduleHandle + 0x0005AF5B);
 		break;
 		case MODULE_DIRECTOR_9:
@@ -396,10 +399,12 @@ bool extender(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterfa
 				return false;
 			}
 		}
+
 		if (!extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x0005F44C, (char*)moduleHandle + 0x0005F462)) {
 			callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Extend Code");
 			return false;
 		}
+
 		codeExtended = extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x0005AF48, (char*)moduleHandle + 0x0005AF65);
 		break;
 		case MODULE_DIRECTOR_10:
@@ -409,10 +414,12 @@ bool extender(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterfa
 				return false;
 			}
 		}
+
 		if (!extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x000622C8, (char*)moduleHandle + 0x000622DE)) {
 			callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Extend Code");
 			return false;
 		}
+
 		codeExtended = extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x0005DD13, (char*)moduleHandle + 0x0005DD30);
 		break;
 		case MODULE_DIRECTOR_101:
@@ -422,10 +429,12 @@ bool extender(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterfa
 				return false;
 			}
 		}
+
 		if (!extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x000636D8, (char*)moduleHandle + 0x000636EE)) {
 			callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Extend Code");
 			return false;
 		}
+
 		codeExtended = extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x0005EF2A, (char*)moduleHandle + 0x0005EF47);
 		break;
 		case MODULE_DIRECTOR_1011:
@@ -435,10 +444,12 @@ bool extender(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterfa
 				return false;
 			}
 		}
+
 		if (!extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x0006372C, (char*)moduleHandle + 0x00063742)) {
 			callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Extend Code");
 			return false;
 		}
+
 		codeExtended = extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x0005EF82, (char*)moduleHandle + 0x0005EF9F);
 		break;
 		case MODULE_DIRECTOR_11:
@@ -448,10 +459,12 @@ bool extender(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterfa
 				return false;
 			}
 		}
+
 		if (!extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x0008189D, (char*)moduleHandle + 0x000818BD)) {
 			callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Extend Code");
 			return false;
 		}
+
 		codeExtended = extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x00076FBC, (char*)moduleHandle + 0x00076FE1);
 		break;
 		case MODULE_DIRECTOR_1103:
@@ -461,10 +474,12 @@ bool extender(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterfa
 				return false;
 			}
 		}
+
 		if (!extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x0008176D, (char*)moduleHandle + 0x0008178D)) {
 			callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Extend Code");
 			return false;
 		}
+
 		codeExtended = extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x00076E8C, (char*)moduleHandle + 0x00076EB1);
 		break;
 		case MODULE_DIRECTOR_115:
@@ -474,10 +489,12 @@ bool extender(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterfa
 				return false;
 			}
 		}
+
 		if (!extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x0008413D, (char*)moduleHandle + 0x0008415D)) {
 			callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Extend Code");
 			return false;
 		}
+
 		codeExtended = extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x000796DC, (char*)moduleHandle + 0x00079701);
 		break;
 		case MODULE_DIRECTOR_1158:
@@ -487,10 +504,12 @@ bool extender(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterfa
 				return false;
 			}
 		}
+
 		if (!extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x00084A9D, (char*)moduleHandle + 0x00084ABD)) {
 			callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Extend Code");
 			return false;
 		}
+
 		codeExtended = extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x00079F6C, (char*)moduleHandle + 0x00079F91);
 		break;
 		case MODULE_DIRECTOR_1159:
@@ -500,10 +519,12 @@ bool extender(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterfa
 				return false;
 			}
 		}
+
 		if (!extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x000855BD, (char*)moduleHandle + 0x000855DD)) {
 			callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Extend Code");
 			return false;
 		}
+
 		codeExtended = extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x0007AA6C, (char*)moduleHandle + 0x0007AA91);
 		break;
 		case MODULE_DIRECTOR_12:
@@ -513,10 +534,12 @@ bool extender(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterfa
 				return false;
 			}
 		}
+
 		if (!extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x000D431D, (char*)moduleHandle + 0x000D433C)) {
 			callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Extend Code");
 			return false;
 		}
+
 		codeExtended = extendCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, 0x000C9B51, (char*)moduleHandle + 0x000C9B71);
 	}
 
@@ -525,7 +548,6 @@ bool extender(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterfa
 		callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Extend Code");
 		return false;
 	}
-
 	// cleanup
 	return true;
 }
