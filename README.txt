@@ -38,4 +38,4 @@ Tested With
 
 
 Usage
-	In Director, go to Xtras > TOMYSSHADOW > Movie Restorer Tool 1.4.0.
+	In Director, go to Xtras > TOMYSSHADOW > Movie Restorer Tool 1.4.1.
