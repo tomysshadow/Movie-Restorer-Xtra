@@ -51,9 +51,9 @@ DEFINE_GUID(CLSID_TStdXtra,
 			0xfab4e3bc, 0x2bf4, 0x4015, 0xbe, 0x20, 0x43, 0x83, 0x2a, 0x5a, 0x5f, 0x37);
 
 EXTERN_BEGIN_DEFINE_CLASS_INSTANCE_VARS(TStdXtra)
-	PIMoaMmUtils2 pMoaMmUtilsInterface;
-	PIMoaMmValue pMoaMmValueInterface;
-	PIMoaDrPlayer pMoaDrPlayerInterface;
+	PIMoaMmValue moaMmValueInterfacePointer;
+	PIMoaMmUtils2 moaMmUtilsInterfacePointer;
+	PIMoaDrPlayer moaDrPlayerInterfacePointer;
 EXTERN_END_DEFINE_CLASS_INSTANCE_VARS
 
 EXTERN_BEGIN_DEFINE_CLASS_INTERFACE(TStdXtra, IMoaRegister)
@@ -70,6 +70,11 @@ EXTERN_END_DEFINE_CLASS_INTERFACE
 
 
 
+
+typedef DWORD VIRTUAL_ADDRESS;
+typedef DWORD VIRTUAL_SIZE;
+typedef DWORD RELATIVE_VIRTUAL_ADDRESS;
+typedef DWORD EXTENDED_CODE_ADDRESS;
 
 inline size_t stringSize(const char* string) {
 	return strlen(string) + 1;
@@ -106,19 +111,23 @@ bool shiftMemory(size_t bufferSize, const void* buffer, size_t sourceSize, const
 
 
 
-inline bool callLingoQuit(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface) {
+inline bool callLingoQuit(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer) {
 	// we can't just use Win32 API's TerminateProcess because it causes a long pause before closing the movie improperly
 	// so we use Lingo's Quit handler
 	MoaError err = kMoaErr_NoErr;
 	MoaMmSymbol quitSymbol;
 
-	err = pMoaMmValueInterface->StringToSymbol("Quit", &quitSymbol);
+	if (!moaMmValueInterfacePointer || !moaDrMovieInterfacePointer) {
+		return false;
+	}
+
+	err = moaMmValueInterfacePointer->StringToSymbol("Quit", &quitSymbol);
 
 	if (err != kMoaErr_NoErr) {
 		return false;
 	}
 
-	err = pMoaDrMovieInterface->CallHandler(quitSymbol, 0, NULL, NULL);
+	err = moaDrMovieInterfacePointer->CallHandler(quitSymbol, 0, NULL, NULL);
 
 	if (err != kMoaErr_NoErr) {
 		return false;
@@ -126,26 +135,30 @@ inline bool callLingoQuit(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDr
 	return true;
 }
 
-inline bool callLingoAlert(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface, ConstPMoaChar message) {
+inline bool callLingoAlert(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer, ConstPMoaChar message) {
 	// we can't just use Win32 API's MessageBox or it'll cause graphical glitches from the movie not being paused
 	// so we use Lingo's Alert handler (as per the XDK's recommendation)
 	MoaError err = kMoaErr_NoErr;
 	MoaMmSymbol alertSymbol;
 	MoaMmValue messageValue = kVoidMoaMmValueInitializer;
 
-	err = pMoaMmValueInterface->StringToSymbol("Alert", &alertSymbol);
+	if (!moaMmValueInterfacePointer || !moaDrMovieInterfacePointer || !message) {
+		return false;
+	}
+
+	err = moaMmValueInterfacePointer->StringToSymbol("Alert", &alertSymbol);
 
 	if (err != kMoaErr_NoErr) {
 		return false;
 	}
 
-	err = pMoaMmValueInterface->StringToValue(message, &messageValue);
+	err = moaMmValueInterfacePointer->StringToValue(message, &messageValue);
 
 	if (err != kMoaErr_NoErr) {
 		return false;
 	}
 
-	err = pMoaDrMovieInterface->CallHandler(alertSymbol, 1, &messageValue, NULL);
+	err = moaDrMovieInterfacePointer->CallHandler(alertSymbol, 1, &messageValue, NULL);
 
 	if (err != kMoaErr_NoErr) {
 		return false;
@@ -153,67 +166,87 @@ inline bool callLingoAlert(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaD
 	return true;
 }
 
-inline bool callLingoAlertXtraMissing(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface, ConstPMoaChar message) {
-	if (!callLingoAlert(pMoaMmValueInterface, pMoaDrMovieInterface, message)) {
+inline bool callLingoAlertXtraMissing(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer, ConstPMoaChar message) {
+	if (!moaMmValueInterfacePointer || !moaDrMovieInterfacePointer || !message) {
 		return false;
 	}
 
-	if (!callLingoAlert(pMoaMmValueInterface, pMoaDrMovieInterface, "An Xtra that the Movie Restorer Xtra requires is missing.")) {
-		return false;
-	}
-	return true;
-}
-
-inline bool callLingoAlertComponentCorrupted(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface, ConstPMoaChar message) {
-	if (!callLingoAlert(pMoaMmValueInterface, pMoaDrMovieInterface, message)) {
+	if (!callLingoAlert(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, message)) {
 		return false;
 	}
 
-	if (!callLingoAlert(pMoaMmValueInterface, pMoaDrMovieInterface, "A Component that the Movie Restorer Xtra requires is corrupted, garbled or tampered with. Please use the official Components provided by Macromedia/Adobe.")) {
+	if (!callLingoAlert(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "An Xtra that the Movie Restorer Xtra requires is missing.")) {
 		return false;
 	}
 	return true;
 }
 
-inline bool callLingoAlertIncompatibleDirectorVersion(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface, ConstPMoaChar message) {
-	if (!callLingoAlert(pMoaMmValueInterface, pMoaDrMovieInterface, message)) {
+inline bool callLingoAlertComponentCorrupted(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer, ConstPMoaChar message) {
+	if (!moaMmValueInterfacePointer || !moaDrMovieInterfacePointer || !message) {
 		return false;
 	}
 
-	if (!callLingoAlert(pMoaMmValueInterface, pMoaDrMovieInterface, "The Movie Restorer Xtra has determined it is incompatible with this Director version.")) {
-		return false;
-	}
-	return true;
-}
-
-inline bool callLingoAlertAntivirus(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface, ConstPMoaChar message) {
-	if (!callLingoAlert(pMoaMmValueInterface, pMoaDrMovieInterface, message)) {
+	if (!callLingoAlert(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, message)) {
 		return false;
 	}
 
-	if (!callLingoAlert(pMoaMmValueInterface, pMoaDrMovieInterface, "Your Antivirus may be preventing the Movie Restorer Xtra from working properly.")) {
+	if (!callLingoAlert(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "A Component that the Movie Restorer Xtra requires is corrupted, garbled or tampered with. Please use the official Components provided by Macromedia/Adobe.")) {
 		return false;
 	}
 	return true;
 }
 
+inline bool callLingoAlertIncompatibleDirectorVersion(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer, ConstPMoaChar message) {
+	if (!moaMmValueInterfacePointer || !moaDrMovieInterfacePointer || !message) {
+		return false;
+	}
 
+	if (!callLingoAlert(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, message)) {
+		return false;
+	}
 
-
-inline DWORD createExtendedCodeAddress(HMODULE moduleHandle, DWORD address) {
-	return (DWORD)moduleHandle + address;
+	if (!callLingoAlert(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "The Movie Restorer Xtra has determined it is incompatible with this Director version.")) {
+		return false;
+	}
+	return true;
 }
 
-bool getSectionAddressAndSize(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface, HMODULE moduleHandle, DWORD virtualAddress, DWORD virtualSize) {
+inline bool callLingoAlertAntivirus(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer, ConstPMoaChar message) {
+	if (!moaMmValueInterfacePointer || !moaDrMovieInterfacePointer || !message) {
+		return false;
+	}
+
+	if (!callLingoAlert(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, message)) {
+		return false;
+	}
+
+	if (!callLingoAlert(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Your Antivirus may be preventing the Movie Restorer Xtra from working properly.")) {
+		return false;
+	}
+	return true;
+}
+
+
+
+
+inline EXTENDED_CODE_ADDRESS createExtendedCodeAddress(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS relativeVirtualAddress) {
+	return (VIRTUAL_ADDRESS)moduleHandle + relativeVirtualAddress;
+}
+
+bool testAddress(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer, HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VIRTUAL_SIZE virtualSize) {
+	if (!moaMmValueInterfacePointer || !moaDrMovieInterfacePointer || !moduleHandle) {
+		return false;
+	}
+
 	if (!moduleHandle) {
-		//callLingoAlertXtraMissing(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Get Module Handle");
+		//callLingoAlertXtraMissing(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Get Module Handle");
 		return false;
 	}
 
 	PIMAGE_NT_HEADERS imageNtHeader = ImageNtHeader(moduleHandle);
 
 	if (!imageNtHeader) {
-		//callLingoAlert(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Get Image NT Header");
+		//callLingoAlert(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Get Image NT Header");
 		return false;
 	}
 
@@ -221,12 +254,12 @@ bool getSectionAddressAndSize(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pM
 
 	if (!imageSectionHeader) {
 		imageNtHeader = NULL;
-		//callLingoAlert(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Get Image Section Header");
+		//callLingoAlert(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Get Image Section Header");
 		return false;
 	}
 
 	for (WORD i = 0;i < imageNtHeader->FileHeader.NumberOfSections;i++) {
-		if (virtualAddress >= (DWORD)moduleHandle + imageSectionHeader->VirtualAddress && virtualAddress + virtualSize <= (DWORD)moduleHandle + imageSectionHeader->VirtualAddress + imageSectionHeader->Misc.VirtualSize) {
+		if (virtualAddress >= (VIRTUAL_ADDRESS)moduleHandle + imageSectionHeader->VirtualAddress && virtualAddress + virtualSize <= (VIRTUAL_ADDRESS)moduleHandle + imageSectionHeader->VirtualAddress + imageSectionHeader->Misc.VirtualSize) {
 			imageNtHeader = NULL;
 			imageSectionHeader = NULL;
 			return true;
@@ -240,12 +273,16 @@ bool getSectionAddressAndSize(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pM
 	return false;
 }
 
-bool unprotectCode(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface, HMODULE moduleHandle, DWORD virtualAddress, DWORD virtualSize, DWORD &lpflOldProtect) {
-	if (!getSectionAddressAndSize(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, virtualAddress, virtualSize)) {
+bool unprotectCode(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer, HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VIRTUAL_SIZE virtualSize, DWORD &oldProtect) {
+	if (!moaMmValueInterfacePointer || !moaDrMovieInterfacePointer || !moduleHandle) {
 		return false;
 	}
 
-	if (!VirtualProtect((LPVOID)virtualAddress, virtualSize, PAGE_EXECUTE_READWRITE, &lpflOldProtect) || !virtualAddress || !virtualSize) {
+	if (!testAddress(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize)) {
+		return false;
+	}
+
+	if (!virtualAddress || !virtualSize || !VirtualProtect((LPVOID)virtualAddress, virtualSize, PAGE_EXECUTE_READWRITE, &oldProtect)) {
 		return false;
 	}
 
@@ -256,72 +293,80 @@ bool unprotectCode(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieIn
 		|| memoryBasicInformation.Protect & PAGE_NOACCESS
 		|| memoryBasicInformation.Protect & PAGE_EXECUTE) {
 		// dangerous - we unprotected the code but we can't query it, so quit
-		callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Get Basic Memory Information");
-		callLingoQuit(pMoaMmValueInterface, pMoaDrMovieInterface);
+		callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Get Basic Memory Information");
+		callLingoQuit(moaMmValueInterfacePointer, moaDrMovieInterfacePointer);
 		TerminateProcess(GetCurrentProcess(), 0);
 		return false;
 	}
 	return true;
 }
 
-bool protectCode(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface, HMODULE moduleHandle, DWORD virtualAddress, DWORD virtualSize, DWORD &lpflOldProtect) {
-	if (!getSectionAddressAndSize(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, virtualAddress, virtualSize)) {
-		callLingoAlertComponentCorrupted(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Get Section Address And Size");
+bool protectCode(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer, HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VIRTUAL_SIZE virtualSize, DWORD &oldProtect) {
+	if (!moaMmValueInterfacePointer || !moaDrMovieInterfacePointer || !moduleHandle) {
 		return false;
 	}
 
-	if (!lpflOldProtect || !VirtualProtect((LPVOID)virtualAddress, virtualSize, lpflOldProtect, &lpflOldProtect)) {
-		callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Protect Code");
+	if (!testAddress(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize)) {
+		callLingoAlertComponentCorrupted(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Get Section Address And Size");
+		return false;
+	}
+
+	if (!virtualAddress || !virtualSize || !VirtualProtect((LPVOID)virtualAddress, virtualSize, oldProtect, &oldProtect)) {
+		callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Protect Code");
 		return false;
 	}
 	return true;
 }
 
-bool flushCode(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface, HMODULE moduleHandle, DWORD virtualAddress, DWORD virtualSize) {
-	if (!getSectionAddressAndSize(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, virtualAddress, virtualSize)) {
-		callLingoAlertComponentCorrupted(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Get Section Address And Size");
+bool flushCode(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer, HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VIRTUAL_SIZE virtualSize) {
+	if (!moaMmValueInterfacePointer || !moaDrMovieInterfacePointer || !moduleHandle) {
+		return false;
+	}
+
+	if (!testAddress(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize)) {
+		callLingoAlertComponentCorrupted(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Get Section Address And Size");
 		return false;
 	}
 
 	if (!FlushInstructionCache(GetCurrentProcess(), (LPCVOID)virtualAddress, virtualSize)) {
-		callLingoAlertAntivirus(pMoaMmValueInterface, pMoaDrMovieInterface, "Failed to Flush Code");
+		callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Flush Code");
 		return false;
 	}
 	return true;
 }
 
-bool testCode(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface, HMODULE moduleHandle, DWORD relativeVirtualAddress, DWORD virtualSize, unsigned char code[]) {
-	if (!moduleHandle) {
+bool testCode(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer, HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS relativeVirtualAddress, VIRTUAL_SIZE virtualSize, unsigned char code[]) {
+	if (!moaMmValueInterfacePointer || !moaDrMovieInterfacePointer || !moduleHandle) {
 		return false;
 	}
 
-	DWORD virtualAddress = (DWORD)moduleHandle + relativeVirtualAddress;
-	DWORD lpflOldProtect = 0;
+	VIRTUAL_ADDRESS virtualAddress = (VIRTUAL_ADDRESS)moduleHandle + relativeVirtualAddress;
+	DWORD oldProtect = 0;
 
-	if (!unprotectCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, virtualAddress, virtualSize, lpflOldProtect)) {
+	if (!unprotectCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize, oldProtect)) {
 		return false;
 	}
 
 	bool result = memoryEqual((const void*)virtualAddress, (const void*)code, virtualSize);
 
-	if (!protectCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, virtualAddress, virtualSize, lpflOldProtect)) {
-		callLingoQuit(pMoaMmValueInterface, pMoaDrMovieInterface);
+	if (!protectCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize, oldProtect)) {
+		callLingoQuit(moaMmValueInterfacePointer, moaDrMovieInterfacePointer);
 		TerminateProcess(GetCurrentProcess(), 0);
 		return false;
 	}
 	return result;
 }
 
-bool extendCode(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface, HMODULE moduleHandle, DWORD relativeVirtualAddress, void* code, bool call = false) {
-	if (!moduleHandle) {
+bool extendCode(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer, HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS relativeVirtualAddress, void* code, bool call = false) {
+	if (!moaMmValueInterfacePointer || !moaDrMovieInterfacePointer || !moduleHandle) {
 		return false;
 	}
 
-	DWORD virtualAddress = (DWORD)moduleHandle + relativeVirtualAddress;
-	DWORD virtualSize = 5;
-	DWORD lpflOldProtect = 0;
+	VIRTUAL_ADDRESS virtualAddress = (VIRTUAL_ADDRESS)moduleHandle + relativeVirtualAddress;
+	VIRTUAL_SIZE virtualSize = 5;
+	DWORD oldProtect = 0;
 
-	if (!unprotectCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, virtualAddress, virtualSize, lpflOldProtect)) {
+	if (!unprotectCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize, oldProtect)) {
 		return false;
 	}
 
@@ -331,45 +376,45 @@ bool extendCode(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInter
 		*(PBYTE)virtualAddress = 0x58;
 	}
 
-	*(PDWORD)((PBYTE)virtualAddress + 1) = (DWORD)code - virtualAddress - virtualSize;
+	*(VIRTUAL_ADDRESS*)((PBYTE)virtualAddress + 1) = (VIRTUAL_ADDRESS)code - virtualAddress - virtualSize;
 
-	if (!flushCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, virtualAddress, virtualSize)) {
-		callLingoQuit(pMoaMmValueInterface, pMoaDrMovieInterface);
+	if (!flushCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize)) {
+		callLingoQuit(moaMmValueInterfacePointer, moaDrMovieInterfacePointer);
 		TerminateProcess(GetCurrentProcess(), 0);
 		return false;
 	}
 
-	if (!protectCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, virtualAddress, virtualSize, lpflOldProtect)) {
-		callLingoQuit(pMoaMmValueInterface, pMoaDrMovieInterface);
+	if (!protectCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize, oldProtect)) {
+		callLingoQuit(moaMmValueInterfacePointer, moaDrMovieInterfacePointer);
 		TerminateProcess(GetCurrentProcess(), 0);
 		return false;
 	}
 	return true;
 }
 
-bool extendCode(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface, HMODULE moduleHandle, DWORD relativeVirtualAddress) {
-	if (!moduleHandle) {
+bool extendCode(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer, HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS relativeVirtualAddress) {
+	if (!moaMmValueInterfacePointer || !moaDrMovieInterfacePointer || !moduleHandle) {
 		return false;
 	}
 
-	DWORD virtualAddress = (DWORD)moduleHandle + relativeVirtualAddress;
-	DWORD virtualSize = 1;
-	DWORD lpflOldProtect = 0;
+	VIRTUAL_ADDRESS virtualAddress = (VIRTUAL_ADDRESS)moduleHandle + relativeVirtualAddress;
+	VIRTUAL_SIZE virtualSize = 1;
+	DWORD oldProtect = 0;
 
-	if (!unprotectCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, virtualAddress, virtualSize, lpflOldProtect)) {
+	if (!unprotectCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize, oldProtect)) {
 		return false;
 	}
 
 	*(PBYTE)virtualAddress = 0x90;
 
-	if (!flushCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, virtualAddress, virtualSize)) {
-		callLingoQuit(pMoaMmValueInterface, pMoaDrMovieInterface);
+	if (!flushCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize)) {
+		callLingoQuit(moaMmValueInterfacePointer, moaDrMovieInterfacePointer);
 		TerminateProcess(GetCurrentProcess(), 0);
 		return false;
 	}
 
-	if (!protectCode(pMoaMmValueInterface, pMoaDrMovieInterface, moduleHandle, virtualAddress, virtualSize, lpflOldProtect)) {
-		callLingoQuit(pMoaMmValueInterface, pMoaDrMovieInterface);
+	if (!protectCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize, oldProtect)) {
+		callLingoQuit(moaMmValueInterfacePointer, moaDrMovieInterfacePointer);
 		TerminateProcess(GetCurrentProcess(), 0);
 		return false;
 	}
@@ -379,6 +424,6 @@ bool extendCode(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInter
 
 
 
-bool extender(PIMoaMmValue pMoaMmValueInterface, PIMoaDrMovie pMoaDrMovieInterface);
+bool extender(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer);
 
 #endif
