@@ -31,6 +31,7 @@ Tested With
 	-11.5.0.593
 	-11.5.8.612
 	-11.5.9.629
+	-11.6.5.635
 	-12.0.0.111
 
 	Compatibility with untested versions is not guaranteed.
