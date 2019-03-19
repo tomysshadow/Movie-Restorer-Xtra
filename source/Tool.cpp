@@ -44,6 +44,8 @@ END_XTRA
 STDMETHODIMP_(MoaError) MoaCreate_TStdXtra(TStdXtra* This) {
 	moa_try
 
+	ThrowNull(This);
+
 	ThrowErr(This->pCallback->QueryInterface(&IID_IMoaMmValue, (PPMoaVoid)&This->moaMmValueInterfacePointer));
 	ThrowErr(This->pCallback->QueryInterface(&IID_IMoaMmUtils2, (PPMoaVoid)&This->moaMmUtilsInterfacePointer));
 	ThrowErr(This->pCallback->QueryInterface(&IID_IMoaDrPlayer, (PPMoaVoid)&This->moaDrPlayerInterfacePointer));
@@ -57,6 +59,8 @@ STDMETHODIMP_(MoaError) MoaCreate_TStdXtra(TStdXtra* This) {
 // interfaces we Queried for from Director before
 STDMETHODIMP_(void) MoaDestroy_TStdXtra(TStdXtra* This) {
 	moa_try
+
+	ThrowNull(This);
 
 	if (This->moaMmValueInterfacePointer) {
 		This->moaMmValueInterfacePointer->Release();
@@ -101,6 +105,9 @@ typedef MoaLong MyData;
 // that will tell Director what this Xtra does
 STDMETHODIMP TStdXtra_IMoaRegister::Register(PIMoaCache pCache, PIMoaXtraEntryDict pXtraDict) {
 	moa_try
+
+	ThrowNull(pCache);
+	ThrowNull(pXtraDict);
 
 	PIMoaRegistryEntryDict pReg;
 	MoaBool bItsSafe = FALSE;
@@ -193,6 +200,8 @@ STDMETHODIMP TStdXtra_IMoaMmXTool::GetEnabled(PMoaDrEnabledState pEnabledState) 
 	We're always enabled, so it doesn't matter what we do
 	here. */
 
+	ThrowNull(pEnabledState);
+
 	/*
 	* --> insert additional code -->
 	*/
@@ -215,6 +224,8 @@ STDMETHODIMP TStdXtra_IMoaMmXTool::GetEnabled(PMoaDrEnabledState pEnabledState) 
 // the IMoaRegister interface
 MoaError TStdXtra_IMoaMmXTool::XToolExtender(PIMoaDrMovie moaDrMovieInterfacePointer) {
 	moa_try
+
+	ThrowNull(moaDrMovieInterfacePointer);
 
 	if (!extender(pObj->moaMmValueInterfacePointer, moaDrMovieInterfacePointer)) {
 		callLingoQuit(pObj->moaMmValueInterfacePointer, moaDrMovieInterfacePointer);

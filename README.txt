@@ -1,4 +1,4 @@
-Movie Restorer Xtra 1.4.1
+Movie Restorer Xtra 1.4.1 Hotfix 1
 By Anthony Kleine
 
 	This Director Xtra allows Director to open and
