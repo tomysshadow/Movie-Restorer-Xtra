@@ -116,7 +116,7 @@ STDMETHODIMP TStdXtra_IMoaRegister::Register(PIMoaCache pCache, PIMoaXtraEntryDi
 	ThrowErr(pCache->AddRegistryEntry(pXtraDict, &CLSID_TStdXtra, &IID_IMoaMmXTool, &pReg));
 
 	// register Standard Tool Entries
-	char* nameStr = "Movie Restorer Tool 1.4.1";
+	char* nameStr = "Movie Restorer Tool 1.4.2";
 	char* catStr = "TOMYSSHADOW";
 	MoaBoolParam alwaysEnabled = TRUE;
 
@@ -230,13 +230,13 @@ MoaError TStdXtra_IMoaMmXTool::XToolExtender(PIMoaDrMovie moaDrMovieInterfacePoi
 	if (!extender(pObj->moaMmValueInterfacePointer, moaDrMovieInterfacePointer)) {
 		callLingoQuit(pObj->moaMmValueInterfacePointer, moaDrMovieInterfacePointer);
 		TerminateProcess(GetCurrentProcess(), 0);
-		Throw(kMoaErr_NoErr);
+		Throw(kMoaErr_InternalError);
 	}
 
 	if (!callLingoAlert(pObj->moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Movie Restorer Tool Enabled Successfully!")) {
 		callLingoQuit(pObj->moaMmValueInterfacePointer, moaDrMovieInterfacePointer);
 		TerminateProcess(GetCurrentProcess(), 0);
-		Throw(kMoaErr_NoErr);
+		Throw(kMoaErr_InternalError);
 	}
 	moa_catch
 	moa_catch_end

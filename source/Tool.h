@@ -234,7 +234,7 @@ inline EXTENDED_CODE_ADDRESS createExtendedCodeAddress(HMODULE moduleHandle, REL
 	return (VIRTUAL_ADDRESS)moduleHandle + relativeVirtualAddress;
 }
 
-bool testAddress(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer, HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VIRTUAL_SIZE virtualSize) {
+bool testSectionAddress(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer, HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VIRTUAL_SIZE virtualSize) {
 	if (!moaMmValueInterfacePointer || !moaDrMovieInterfacePointer || !moduleHandle) {
 		return false;
 	}
@@ -244,24 +244,24 @@ bool testAddress(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovi
 		return false;
 	}
 
-	PIMAGE_NT_HEADERS imageNtHeader = ImageNtHeader(moduleHandle);
+	PIMAGE_NT_HEADERS imageNTHeader = ImageNtHeader(moduleHandle);
 
-	if (!imageNtHeader) {
+	if (!imageNTHeader) {
 		//callLingoAlert(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Get Image NT Header");
 		return false;
 	}
 
-	PIMAGE_SECTION_HEADER imageSectionHeader = (PIMAGE_SECTION_HEADER)(imageNtHeader + 1);
+	PIMAGE_SECTION_HEADER imageSectionHeader = (PIMAGE_SECTION_HEADER)(imageNTHeader + 1);
 
 	if (!imageSectionHeader) {
-		imageNtHeader = NULL;
+		imageNTHeader = NULL;
 		//callLingoAlert(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Get Image Section Header");
 		return false;
 	}
 
-	for (WORD i = 0;i < imageNtHeader->FileHeader.NumberOfSections;i++) {
+	for (WORD i = 0;i < imageNTHeader->FileHeader.NumberOfSections;i++) {
 		if (virtualAddress >= (VIRTUAL_ADDRESS)moduleHandle + imageSectionHeader->VirtualAddress && virtualAddress + virtualSize <= (VIRTUAL_ADDRESS)moduleHandle + imageSectionHeader->VirtualAddress + imageSectionHeader->Misc.VirtualSize) {
-			imageNtHeader = NULL;
+			imageNTHeader = NULL;
 			imageSectionHeader = NULL;
 			return true;
 		}
@@ -269,7 +269,7 @@ bool testAddress(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovi
 	}
 
 	// not dangerous, so let the caller decide whether or not to quit
-	imageNtHeader = NULL;
+	imageNTHeader = NULL;
 	imageSectionHeader = NULL;
 	return false;
 }
@@ -279,7 +279,7 @@ bool unprotectCode(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMo
 		return false;
 	}
 
-	if (!testAddress(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize)) {
+	if (!testSectionAddress(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize)) {
 		return false;
 	}
 
@@ -307,8 +307,8 @@ bool protectCode(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovi
 		return false;
 	}
 
-	if (!testAddress(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize)) {
-		callLingoAlertComponentCorrupted(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Get Section Address And Size");
+	if (!testSectionAddress(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize)) {
+		callLingoAlertComponentCorrupted(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Test Section Address");
 		return false;
 	}
 
@@ -324,8 +324,8 @@ bool flushCode(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieI
 		return false;
 	}
 
-	if (!testAddress(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize)) {
-		callLingoAlertComponentCorrupted(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Get Section Address And Size");
+	if (!testSectionAddress(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize)) {
+		callLingoAlertComponentCorrupted(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Test Section Address");
 		return false;
 	}
 
@@ -371,12 +371,7 @@ bool extendCode(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovie
 		return false;
 	}
 
-	if (!call) {
-		*(PBYTE)virtualAddress = 0xE9;
-	} else {
-		*(PBYTE)virtualAddress = 0x58;
-	}
-
+	*(PBYTE)virtualAddress = 0xE9 - call;
 	*(VIRTUAL_ADDRESS*)((PBYTE)virtualAddress + 1) = (VIRTUAL_ADDRESS)code - virtualAddress - virtualSize;
 
 	if (!flushCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, virtualAddress, virtualSize)) {
