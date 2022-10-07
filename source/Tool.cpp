@@ -117,7 +117,7 @@ STDMETHODIMP TStdXtra_IMoaRegister::Register(PIMoaCache pCache, PIMoaXtraEntryDi
 
 	// register Standard Tool Entries
 	char* nameStr = "Enable";
-	char* catStr = "Movie Restorer Tool 1.4.5";
+	char* catStr = "Movie Restorer Tool 1.5.2";
 	MoaBoolParam alwaysEnabled = TRUE;
 
 	// private entries
