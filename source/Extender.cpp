@@ -5,21 +5,21 @@
 
 bool testSectionAddress(HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VIRTUAL_SIZE virtualSize) {
 	if (!moduleHandle) {
-		showLastError("moduleHandle must not be NULL");
+		//showLastError("moduleHandle must not be NULL");
 		return false;
 	}
 
 	PIMAGE_NT_HEADERS imageNTHeaders = ImageNtHeader(moduleHandle);
 
 	if (!imageNTHeaders) {
-		showLastError("Failed to Image NT Header");
+		//showLastError("Failed to Image NT Header");
 		return false;
 	}
 
 	PIMAGE_SECTION_HEADER imageSectionHeader = (PIMAGE_SECTION_HEADER)(imageNTHeaders + 1);
 
 	if (!imageSectionHeader) {
-		showLastError("imageSectionHeader must not be NULL");
+		//showLastError("imageSectionHeader must not be NULL");
 		imageNTHeaders = NULL;
 		return false;
 	}
@@ -41,7 +41,7 @@ bool testSectionAddress(HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VI
 
 bool unprotectCode(HMODULE moduleHandle, VIRTUAL_ADDRESS codeVirtualAddress, VIRTUAL_SIZE codeVirtualSize, DWORD &oldProtect) {
 	if (!moduleHandle) {
-		showLastError("moduleHandle must not be NULL");
+		//showLastError("moduleHandle must not be NULL");
 		return false;
 	}
 
@@ -59,7 +59,7 @@ bool unprotectCode(HMODULE moduleHandle, VIRTUAL_ADDRESS codeVirtualAddress, VIR
 
 bool protectCode(HMODULE moduleHandle, VIRTUAL_ADDRESS codeVirtualAddress, VIRTUAL_SIZE codeVirtualSize, DWORD &oldProtect) {
 	if (!moduleHandle) {
-		showLastError("moduleHandle must not be NULL");
+		//showLastError("moduleHandle must not be NULL");
 		return false;
 	}
 
@@ -77,7 +77,7 @@ bool protectCode(HMODULE moduleHandle, VIRTUAL_ADDRESS codeVirtualAddress, VIRTU
 
 bool flushCode(HMODULE moduleHandle, VIRTUAL_ADDRESS codeVirtualAddress, VIRTUAL_SIZE codeVirtualSize) {
 	if (!moduleHandle) {
-		showLastError("moduleHandle must not be NULL");
+		//showLastError("moduleHandle must not be NULL");
 		return false;
 	}
 
@@ -95,12 +95,12 @@ bool flushCode(HMODULE moduleHandle, VIRTUAL_ADDRESS codeVirtualAddress, VIRTUAL
 
 bool testCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtualAddress, VIRTUAL_SIZE codeVirtualSize, CODE1* testedCode) {
 	if (!moduleHandle) {
-		showLastError("moduleHandle must not be NULL");
+		//showLastError("moduleHandle must not be NULL");
 		return false;
 	}
 
 	if (!testedCode) {
-		showLastError("code must not be NULL");
+		//showLastError("code must not be NULL");
 		return false;
 	}
 
@@ -116,7 +116,7 @@ bool testCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtual
 	void* codePointer = (void*)codeVirtualAddress;
 
 	if (!codePointer) {
-		showLastError("codePointer must not be zero");
+		//showLastError("codePointer must not be zero");
 		return false;
 	}
 
@@ -133,12 +133,12 @@ bool testCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtual
 
 bool extendCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtualAddress, void* extendedCode, bool call) {
 	if (!moduleHandle) {
-		showLastError("moduleHandle must not be NULL");
+		//showLastError("moduleHandle must not be NULL");
 		return false;
 	}
 
 	if (!extendedCode) {
-		showLastError("extendedCode must not be zero");
+		//showLastError("extendedCode must not be zero");
 		return false;
 	}
 
@@ -155,7 +155,7 @@ bool extendCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtu
 	CODE1* codePointer = (CODE1*)codeVirtualAddress;
 
 	if (!codePointer) {
-		showLastError("codePointer must not be NULL");
+		//showLastError("codePointer must not be NULL");
 		return false;
 	}
 
@@ -180,7 +180,7 @@ bool extendCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtu
 
 bool extendCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtualAddress) {
 	if (!moduleHandle) {
-		showLastError("moduleHandle must not be NULL");
+		//showLastError("moduleHandle must not be NULL");
 		return false;
 	}
 
@@ -197,7 +197,7 @@ bool extendCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtu
 	CODE1* codePointer = (CODE1*)codeVirtualAddress;
 
 	if (!codePointer) {
-		showLastError("codePointer must not be NULL");
+		//showLastError("codePointer must not be NULL");
 		return false;
 	}
 

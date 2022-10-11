@@ -1,4 +1,4 @@
-Movie Restorer Xtra 1.5.2
+Movie Restorer Xtra 1.5.4
 By Anthony Kleine
 
 	This Director Xtra allows Director to open and
@@ -38,4 +38,4 @@ Tested With
 
 
 Usage
-	In Director, go to Xtras > Movie Restorer 1.4.5 > Enable.
+	In Director, go to Xtras > Movie Restorer 1.5.4 > Enable.
