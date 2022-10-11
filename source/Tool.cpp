@@ -13,11 +13,19 @@ written permission of Adobe.
 
 #define INITGUID 1
 
+#include "shared.h"
 #include "tool.h"
+#include "Extender.h"
 
 #pragma function(strlen)
+#include "moastdif.h"
+#include "mmixtool.h"
+#include "driservc.h"
+#include "xmmvalue.h"
 #include "xclassver.h"
 #include "moatry.h"
+
+#include <windows.h>
 
 
 
@@ -47,7 +55,6 @@ STDMETHODIMP_(MoaError) MoaCreate_TStdXtra(TStdXtra* This) {
 	ThrowNull(This);
 
 	ThrowErr(This->pCallback->QueryInterface(&IID_IMoaMmValue, (PPMoaVoid)&This->moaMmValueInterfacePointer));
-	ThrowErr(This->pCallback->QueryInterface(&IID_IMoaMmUtils2, (PPMoaVoid)&This->moaMmUtilsInterfacePointer));
 	ThrowErr(This->pCallback->QueryInterface(&IID_IMoaDrPlayer, (PPMoaVoid)&This->moaDrPlayerInterfacePointer));
 
 	moa_catch
@@ -63,15 +70,13 @@ STDMETHODIMP_(void) MoaDestroy_TStdXtra(TStdXtra* This) {
 	ThrowNull(This);
 
 	if (This->moaMmValueInterfacePointer) {
-		This->moaMmValueInterfacePointer->Release();
-	}
-
-	if (This->moaMmUtilsInterfacePointer) {
-		This->moaMmUtilsInterfacePointer->Release();
+		ThrowErr(This->moaMmValueInterfacePointer->Release());
+		This->moaMmValueInterfacePointer = NULL;
 	}
 
 	if (This->moaDrPlayerInterfacePointer) {
-		This->moaDrPlayerInterfacePointer->Release();
+		ThrowErr(This->moaDrPlayerInterfacePointer->Release());
+		This->moaDrPlayerInterfacePointer = NULL;
 	}
 	moa_catch
 	moa_catch_end
@@ -93,8 +98,6 @@ STD_INTERFACE_CREATE_DESTROY(TStdXtra, IMoaRegister)
 BEGIN_DEFINE_CLASS_INTERFACE(TStdXtra, IMoaRegister)
 END_DEFINE_CLASS_INTERFACE
 
-typedef MoaLong MyData;
-
 // the IMoaRegister interface is expected
 // to implement a method called Register which
 // will be called by Director after it Queries for
@@ -109,26 +112,19 @@ STDMETHODIMP TStdXtra_IMoaRegister::Register(PIMoaCache pCache, PIMoaXtraEntryDi
 	ThrowNull(pCache);
 	ThrowNull(pXtraDict);
 
-	PIMoaRegistryEntryDict pReg;
-	MoaBool bItsSafe = FALSE;
-
 	// register the Lingo Xtra
+	PIMoaRegistryEntryDict pReg = NULL;
 	ThrowErr(pCache->AddRegistryEntry(pXtraDict, &CLSID_TStdXtra, &IID_IMoaMmXTool, &pReg));
 
 	// register Standard Tool Entries
-	char* nameStr = "Enable";
-	char* catStr = "Movie Restorer Tool 1.5.2";
+	const char* nameStr = "Enable";
+	const char* catStr = "Movie Restorer 1.5.4";
 	MoaBoolParam alwaysEnabled = TRUE;
 
 	// private entries
-	// MyData myData = 0;
-
 	ThrowErr(pReg->Put(kMoaMmDictType_DisplayNameString, nameStr, 0, kMoaMmDictKey_DisplayNameString));
 	ThrowErr(pReg->Put(kMoaMmDictType_DisplayCategoryString, catStr, 0, kMoaMmDictKey_DisplayCategoryString));
 	ThrowErr(pReg->Put(kMoaDrDictType_AlwaysEnabled, &alwaysEnabled, 0, kMoaDrDictKey_AlwaysEnabled));
-
-	// mark Xtra as Safe for Shockwave - but only if it IS safe (which it isn't)
-	//ThrowErr(pReg->Put(kMoaMmDictType_SafeForShockwave, &bItsSafe, sizeof(bItsSafe), kMoaMmDictKey_SafeForShockwave));
 	moa_catch
 	moa_catch_end
 	moa_try_end
@@ -227,15 +223,13 @@ MoaError TStdXtra_IMoaMmXTool::XToolExtender(PIMoaDrMovie moaDrMovieInterfacePoi
 
 	ThrowNull(moaDrMovieInterfacePointer);
 
-	if (!extender(pObj->moaMmValueInterfacePointer, moaDrMovieInterfacePointer)) {
-		callLingoQuit(pObj->moaMmValueInterfacePointer, moaDrMovieInterfacePointer);
-		TerminateProcess(GetCurrentProcess(), 0);
+	if (!extender(moaDrMovieInterfacePointer, pObj->moaMmValueInterfacePointer, pObj->pCallback)) {
+		terminateCurrentProcess();
 		Throw(kMoaErr_InternalError);
 	}
 
-	if (!callLingoAlert(pObj->moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Movie Restorer Tool Enabled Successfully!")) {
-		callLingoQuit(pObj->moaMmValueInterfacePointer, moaDrMovieInterfacePointer);
-		TerminateProcess(GetCurrentProcess(), 0);
+	if (!callLingoAlert("Movie Restorer is now enabled.", moaDrMovieInterfacePointer, pObj->moaMmValueInterfacePointer)) {
+		terminateCurrentProcess();
 		Throw(kMoaErr_InternalError);
 	}
 	moa_catch
@@ -247,7 +241,8 @@ MoaError TStdXtra_IMoaMmXTool::XToolExtender() {
 	moa_try
 
 	// get the Active Movie (so we can call a Lingo Handler in it if we need to)
-	PIMoaDrMovie moaDrMovieInterfacePointer;
+	PIMoaDrMovie moaDrMovieInterfacePointer = NULL;
+
 	ThrowErr(pObj->moaDrPlayerInterfacePointer->GetActiveMovie(&moaDrMovieInterfacePointer));
 	
 	ThrowErr(XToolExtender(moaDrMovieInterfacePointer));
@@ -266,34 +261,102 @@ MoaError TStdXtra_IMoaMmXTool::XToolExtender() {
 
 
 /* Begin Extender */
+bool getInterfaceModuleHandle(HMODULE &moduleHandle, /*MODULE module, */PIMoaDrMovie moaDrMovieInterfacePointer, PIMoaCallback callbackPointer) {
+	moduleHandle = NULL;
+
+	if (!moaDrMovieInterfacePointer || !callbackPointer) {
+		return false;
+	}
+
+	//if (module == MODULE_DIRECTOR_API) {
+	// turn the Director API Interface into a Module Handle
+	PMoaVoid moaVoidPointer = *(PPMoaVoid)moaDrMovieInterfacePointer;
+
+	if (moaVoidPointer) {
+		bool result = false;
+
+		if (!GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN, (LPCSTR)moaVoidPointer, &moduleHandle)) {
+			goto error;
+		}
+
+		result = true;
+		error:
+		moaVoidPointer = NULL;
+		return result;
+	}
+	/*
+	} else {
+		MoaError err = kMoaErr_BadClass;
+		PIMoaMmXScript scriptXtraInstance = NULL;
+
+		// load the Xtra Instance's Interface, then turn it into a Module Handle
+		if (module == MODULE_NET_LINGO_XTRA) {
+			err = callbackPointer->MoaCreateInstance(&CLSID_CNetLingo, &IID_IMoaMmXScript, (PPMoaVoid)&scriptXtraInstance);
+		} else if (module == MODULE_SHOCKWAVE_3D_ASSET_XTRA) {
+			err = callbackPointer->MoaCreateInstance(&CLSID_CShockwave3DAsset, &IID_IMoaMmXScript, (PPMoaVoid)&scriptXtraInstance);
+		}
+
+		if (err != kMoaErr_NoErr) {
+			return false;
+		}
+
+		if (scriptXtraInstance) {
+			bool result = false;
+
+			PMoaVoid moaVoidPointer = *(PPMoaVoid)scriptXtraInstance;
+
+			if (moaVoidPointer) {
+				if (!GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN, (LPCSTR)moaVoidPointer, &moduleHandle)) {
+					goto error2;
+				}
+
+				result = true;
+				error2:
+				moaVoidPointer = NULL;
+			}
+
+			err = scriptXtraInstance->Release();
+			scriptXtraInstance = NULL;
+
+			if (err != kMoaErr_NoErr) {
+				result = false;
+			}
+			return result;
+		}
+	}
+	*/
+	return false;
+}
+
 struct ModuleDirectorVersionTest {
-	RELATIVE_VIRTUAL_ADDRESS relativeVirtualAddress;
-	VIRTUAL_SIZE virtualSize;
-	unsigned char* code;
+	RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtualAddress;
+	VIRTUAL_SIZE codeVirtualSize;
+	CODE1* testedCode;
 };
 
-MODULE_DIRECTOR_VERSION getModuleDirectorVersion(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer, HMODULE moduleHandle, const size_t MODULE_DIRECTOR_VERSION_TESTS_SIZE, ModuleDirectorVersionTest moduleDirectorVersionTests[]) {
+MODULE_DIRECTOR_VERSION getModuleDirectorVersion(HMODULE moduleHandle, const size_t MODULE_DIRECTOR_VERSION_TESTS_SIZE, ModuleDirectorVersionTest moduleDirectorVersionTests[]) {
 	// performs a test to see if this is a supported Director version
 	// it's a simple array of bytes search, nothing more
 	// we support 8.5, 10 and 11.5, so we perform three tests
-	for (unsigned int i = 0;i < MODULE_DIRECTOR_VERSION_TESTS_SIZE;i++) {
-		if (!moduleDirectorVersionTests[i].relativeVirtualAddress) {
-			continue;
-		}
-
-		if (testCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, moduleDirectorVersionTests[i].relativeVirtualAddress, moduleDirectorVersionTests[i].virtualSize, moduleDirectorVersionTests[i].code)) {
-			return (MODULE_DIRECTOR_VERSION)i;
+	for (size_t i = 0; i < MODULE_DIRECTOR_VERSION_TESTS_SIZE; i++) {
+		if (moduleDirectorVersionTests[i].codeVirtualSize) {
+			if (testCode(moduleHandle, moduleDirectorVersionTests[i].codeRelativeVirtualAddress, moduleDirectorVersionTests[i].codeVirtualSize, moduleDirectorVersionTests[i].testedCode)) {
+				return (MODULE_DIRECTOR_VERSION)i;
+			}
 		}
 	}
 	return MODULE_DIRECTOR_INCOMPATIBLE;
 }
 
-bool extender(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieInterfacePointer) {
-	HMODULE moduleHandle = GetModuleHandle("DIRAPI");
+bool extender(PIMoaDrMovie moaDrMovieInterfacePointer, PIMoaMmValue moaMmValueInterfacePointer, PIMoaCallback callbackPointer) {
+	if (!moaDrMovieInterfacePointer || !moaMmValueInterfacePointer || !callbackPointer) {
+		return false;
+	}
 
-	// here is the first check that the Module Handle is valid
-	if (!moduleHandle) {
-		callLingoAlertXtraMissing(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to get Module Handle");
+	HMODULE moduleHandle = NULL;
+
+	if (!getInterfaceModuleHandle(moduleHandle, moaDrMovieInterfacePointer, callbackPointer)) {
+		callLingoAlertXtraMissing("Failed to Get Interface Module Handle", moaDrMovieInterfacePointer, moaMmValueInterfacePointer);
 		return false;
 	}
 
@@ -304,53 +367,53 @@ bool extender(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieIn
 
 	// test the code
 	{
-		const size_t DIRECTOR_API_VERSION_8_TEST_CODE_SIZE = 3;
-		unsigned char directorAPIVersion8TestCode[DIRECTOR_API_VERSION_8_TEST_CODE_SIZE] = {0xFF, 0x14, 0x87};
+		const VIRTUAL_SIZE DIRECTOR_API_VERSION_8_TESTED_CODE_SIZE = 3;
+		CODE1 directorAPIVersion8TestedCode[DIRECTOR_API_VERSION_8_TESTED_CODE_SIZE] = {0xFF, 0x14, 0x87};
 
-		const size_t DIRECTOR_API_VERSION_85_TEST_CODE_SIZE = 19;
-		unsigned char directorAPIVersion85TestCode[DIRECTOR_API_VERSION_85_TEST_CODE_SIZE] = {0x8D, 0x48, 0xFF, 0x81, 0xF9, 0xF0, 0x00, 0x00, 0x00, 0x0F, 0x87, 0x9E, 0x01, 0x00, 0x00, 0x33, 0xD2, 0x8A, 0x91};
+		const VIRTUAL_SIZE DIRECTOR_API_VERSION_85_TESTED_CODE_SIZE = 19;
+		CODE1 directorAPIVersion85TestedCode[DIRECTOR_API_VERSION_85_TESTED_CODE_SIZE] = {0x8D, 0x48, 0xFF, 0x81, 0xF9, 0xF0, 0x00, 0x00, 0x00, 0x0F, 0x87, 0x9E, 0x01, 0x00, 0x00, 0x33, 0xD2, 0x8A, 0x91};
 
-		#define DIRECTOR_API_VERSION_851_TEST_CODE_SIZE DIRECTOR_API_VERSION_85_TEST_CODE_SIZE
-		#define directorAPIVersion851TestCode directorAPIVersion85TestCode
+		#define DIRECTOR_API_VERSION_851_TESTED_CODE_SIZE DIRECTOR_API_VERSION_85_TESTED_CODE_SIZE
+		#define directorAPIVersion851TestedCode directorAPIVersion85TestedCode
 
-		#define DIRECTOR_API_VERSION_9_TEST_CODE_SIZE DIRECTOR_API_VERSION_85_TEST_CODE_SIZE
-		#define directorAPIVersion9TestCode directorAPIVersion85TestCode
+		#define DIRECTOR_API_VERSION_9_TESTED_CODE_SIZE DIRECTOR_API_VERSION_85_TESTED_CODE_SIZE
+		#define directorAPIVersion9TestedCode directorAPIVersion85TestedCode
 
-		const size_t DIRECTOR_API_VERSION_10_TEST_CODE_SIZE = 18;
-		unsigned char directorAPIVersion10TestCode[DIRECTOR_API_VERSION_10_TEST_CODE_SIZE] = {0x8D, 0x48, 0xFF, 0x81, 0xF9, 0xF2, 0x00, 0x00, 0x00, 0x0F, 0x87, 0x7B, 0x22, 0x00, 0x00, 0xFF, 0x24, 0x8D};
+		const VIRTUAL_SIZE DIRECTOR_API_VERSION_10_TESTED_CODE_SIZE = 18;
+		CODE1 directorAPIVersion10TestedCode[DIRECTOR_API_VERSION_10_TESTED_CODE_SIZE] = {0x8D, 0x48, 0xFF, 0x81, 0xF9, 0xF2, 0x00, 0x00, 0x00, 0x0F, 0x87, 0x7B, 0x22, 0x00, 0x00, 0xFF, 0x24, 0x8D};
 
-		#define DIRECTOR_API_VERSION_101_TEST_CODE_SIZE DIRECTOR_API_VERSION_10_TEST_CODE_SIZE
-		#define directorAPIVersion101TestCode directorAPIVersion10TestCode
+		#define DIRECTOR_API_VERSION_101_TESTED_CODE_SIZE DIRECTOR_API_VERSION_10_TESTED_CODE_SIZE
+		#define directorAPIVersion101TestedCode directorAPIVersion10TestedCode
 
-		#define DIRECTOR_API_VERSION_1011_TEST_CODE_SIZE DIRECTOR_API_VERSION_10_TEST_CODE_SIZE
-		#define directorAPIVersion1011TestCode directorAPIVersion10TestCode
+		#define DIRECTOR_API_VERSION_1011_TESTED_CODE_SIZE DIRECTOR_API_VERSION_10_TESTED_CODE_SIZE
+		#define directorAPIVersion1011TestedCode directorAPIVersion10TestedCode
 
-		const size_t DIRECTOR_API_VERSION_11_TEST_CODE_SIZE = 15;
-		unsigned char directorAPIVersion11TestCode[DIRECTOR_API_VERSION_11_TEST_CODE_SIZE] = {0x81, 0xF9, 0xF2, 0x00, 0x00, 0x00, 0x0F, 0x87, 0x72, 0x1F, 0x00, 0x00, 0x0F, 0xB6, 0x89};
+		const VIRTUAL_SIZE DIRECTOR_API_VERSION_11_TESTED_CODE_SIZE = 15;
+		CODE1 directorAPIVersion11TestedCode[DIRECTOR_API_VERSION_11_TESTED_CODE_SIZE] = {0x81, 0xF9, 0xF2, 0x00, 0x00, 0x00, 0x0F, 0x87, 0x72, 0x1F, 0x00, 0x00, 0x0F, 0xB6, 0x89};
 
-		#define DIRECTOR_API_VERSION_1103_TEST_CODE_SIZE DIRECTOR_API_VERSION_11_TEST_CODE_SIZE
-		#define directorAPIVersion1103TestCode directorAPIVersion11TestCode
+		#define DIRECTOR_API_VERSION_1103_TESTED_CODE_SIZE DIRECTOR_API_VERSION_11_TESTED_CODE_SIZE
+		#define directorAPIVersion1103TestedCode directorAPIVersion11TestedCode
 
-		#define DIRECTOR_API_VERSION_115_TEST_CODE_SIZE DIRECTOR_API_VERSION_11_TEST_CODE_SIZE
-		#define directorAPIVersion115TestCode directorAPIVersion11TestCode
+		#define DIRECTOR_API_VERSION_115_TESTED_CODE_SIZE DIRECTOR_API_VERSION_11_TESTED_CODE_SIZE
+		#define directorAPIVersion115TestedCode directorAPIVersion11TestedCode
 
-		const size_t DIRECTOR_API_VERSION_1158_TEST_CODE_SIZE = 15;
-		unsigned char directorAPIVersion1158TestCode[DIRECTOR_API_VERSION_1158_TEST_CODE_SIZE] = {0x81, 0xF9, 0xF2, 0x00, 0x00, 0x00, 0x0F, 0x87, 0xE2, 0x1F, 0x00, 0x00, 0x0F, 0xB6, 0x89};
+		const VIRTUAL_SIZE DIRECTOR_API_VERSION_1158_TESTED_CODE_SIZE = 15;
+		CODE1 directorAPIVersion1158TestedCode[DIRECTOR_API_VERSION_1158_TESTED_CODE_SIZE] = {0x81, 0xF9, 0xF2, 0x00, 0x00, 0x00, 0x0F, 0x87, 0xE2, 0x1F, 0x00, 0x00, 0x0F, 0xB6, 0x89};
 
-		const size_t DIRECTOR_API_VERSION_1159_TEST_CODE_SIZE = 14;
-		unsigned char directorAPIVersion1159TestCode[DIRECTOR_API_VERSION_1159_TEST_CODE_SIZE] = {0x3D, 0xF3, 0x00, 0x00, 0x00, 0x0F, 0x87, 0x8C, 0x20, 0x00, 0x00, 0x0F, 0xB6, 0x88};
+		const VIRTUAL_SIZE DIRECTOR_API_VERSION_1159_TESTED_CODE_SIZE = 14;
+		CODE1 directorAPIVersion1159TestedCode[DIRECTOR_API_VERSION_1159_TESTED_CODE_SIZE] = {0x3D, 0xF3, 0x00, 0x00, 0x00, 0x0F, 0x87, 0x8C, 0x20, 0x00, 0x00, 0x0F, 0xB6, 0x88};
 
-		const size_t DIRECTOR_API_VERSION_12_TEST_CODE_SIZE = 14;
-		unsigned char directorAPIVersion12TestCode[DIRECTOR_API_VERSION_12_TEST_CODE_SIZE] = {0x3D, 0xF3, 0x00, 0x00, 0x00, 0x0F, 0x87, 0xE7, 0x1F, 0x00, 0x00, 0x0F, 0xB6, 0x88};
+		const VIRTUAL_SIZE DIRECTOR_API_VERSION_12_TESTED_CODE_SIZE = 14;
+		CODE1 directorAPIVersion12TestedCode[DIRECTOR_API_VERSION_12_TESTED_CODE_SIZE] = {0x3D, 0xF3, 0x00, 0x00, 0x00, 0x0F, 0x87, 0xE7, 0x1F, 0x00, 0x00, 0x0F, 0xB6, 0x88};
 			
 		const size_t DIRECTOR_API_DIRECTOR_VERSION_TESTS_SIZE = 14;
-		ModuleDirectorVersionTest directorAPIVersionTests[DIRECTOR_API_DIRECTOR_VERSION_TESTS_SIZE] = {{0x000EEC9C, DIRECTOR_API_VERSION_8_TEST_CODE_SIZE, directorAPIVersion8TestCode}, {0x000C8440, DIRECTOR_API_VERSION_85_TEST_CODE_SIZE, directorAPIVersion85TestCode}, {0x000C84C0, DIRECTOR_API_VERSION_851_TEST_CODE_SIZE, directorAPIVersion851TestCode}, {0x000BC9A0, DIRECTOR_API_VERSION_9_TEST_CODE_SIZE, directorAPIVersion9TestCode}, {0x000D5684, DIRECTOR_API_VERSION_10_TEST_CODE_SIZE, directorAPIVersion10TestCode}, {0x000D6A74, DIRECTOR_API_VERSION_101_TEST_CODE_SIZE, directorAPIVersion101TestCode}, {0x000D6E24, DIRECTOR_API_VERSION_1011_TEST_CODE_SIZE, directorAPIVersion1011TestCode}, {0x0010ED0E, DIRECTOR_API_VERSION_11_TEST_CODE_SIZE, directorAPIVersion11TestCode}, {0x0010EC9E, DIRECTOR_API_VERSION_1103_TEST_CODE_SIZE, directorAPIVersion1103TestCode}, {0x001118FE, DIRECTOR_API_VERSION_115_TEST_CODE_SIZE, directorAPIVersion115TestCode}, {0x0011245E, DIRECTOR_API_VERSION_1158_TEST_CODE_SIZE, directorAPIVersion1158TestCode}, {0x001149E3, DIRECTOR_API_VERSION_1159_TEST_CODE_SIZE, directorAPIVersion1159TestCode}, {0x00000000, 0, {}}, {0x00034BF8, DIRECTOR_API_VERSION_12_TEST_CODE_SIZE, directorAPIVersion12TestCode}};
+		ModuleDirectorVersionTest directorAPIVersionTests[DIRECTOR_API_DIRECTOR_VERSION_TESTS_SIZE] = {{0x000EEC9C, DIRECTOR_API_VERSION_8_TESTED_CODE_SIZE, directorAPIVersion8TestedCode}, {0x000C8440, DIRECTOR_API_VERSION_85_TESTED_CODE_SIZE, directorAPIVersion85TestedCode}, {0x000C84C0, DIRECTOR_API_VERSION_851_TESTED_CODE_SIZE, directorAPIVersion851TestedCode}, {0x000BC9A0, DIRECTOR_API_VERSION_9_TESTED_CODE_SIZE, directorAPIVersion9TestedCode}, {0x000D5684, DIRECTOR_API_VERSION_10_TESTED_CODE_SIZE, directorAPIVersion10TestedCode}, {0x000D6A74, DIRECTOR_API_VERSION_101_TESTED_CODE_SIZE, directorAPIVersion101TestedCode}, {0x000D6E24, DIRECTOR_API_VERSION_1011_TESTED_CODE_SIZE, directorAPIVersion1011TestedCode}, {0x0010ED0E, DIRECTOR_API_VERSION_11_TESTED_CODE_SIZE, directorAPIVersion11TestedCode}, {0x0010EC9E, DIRECTOR_API_VERSION_1103_TESTED_CODE_SIZE, directorAPIVersion1103TestedCode}, {0x001118FE, DIRECTOR_API_VERSION_115_TESTED_CODE_SIZE, directorAPIVersion115TestedCode}, {0x0011245E, DIRECTOR_API_VERSION_1158_TESTED_CODE_SIZE, directorAPIVersion1158TestedCode}, {0x001149E3, DIRECTOR_API_VERSION_1159_TESTED_CODE_SIZE, directorAPIVersion1159TestedCode}, {0x00000000, 0, {}}, {0x00034BF8, DIRECTOR_API_VERSION_12_TESTED_CODE_SIZE, directorAPIVersion12TestedCode}};
 			
-		directorAPIDirectorVersion = getModuleDirectorVersion(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, DIRECTOR_API_DIRECTOR_VERSION_TESTS_SIZE, directorAPIVersionTests);
+		directorAPIDirectorVersion = getModuleDirectorVersion(moduleHandle, DIRECTOR_API_DIRECTOR_VERSION_TESTS_SIZE, directorAPIVersionTests);
 	}
 
 	if (directorAPIDirectorVersion == MODULE_DIRECTOR_INCOMPATIBLE) {
-		callLingoAlertIncompatibleDirectorVersion(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Get Module Director Version");
+		callLingoAlertIncompatibleDirectorVersion("Failed to Get Module Director Version", moaDrMovieInterfacePointer, moaMmValueInterfacePointer);
 		return false;
 	}
 
@@ -360,206 +423,180 @@ bool extender(PIMoaMmValue moaMmValueInterfacePointer, PIMoaDrMovie moaDrMovieIn
 		// populate the Module Handle Written Code Return Addresses, now that they're relevant
 		// here is where the real writes happen at the appropriate addresses
 		for (DWORD i = 0;i < 2;i++) {
-			if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0002F471 + i)) {
-				callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-				return false;
+			if (!extendCode(moduleHandle, 0x0002F471 + i)) {
+				goto error;
 			}
 		}
 
-		if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x000726DE, (char*)moduleHandle + 0x00072724)) {
-			callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-			return false;
+		if (!extendCode(moduleHandle, 0x000726DE, (CODE1*)moduleHandle + 0x00072724)) {
+			goto error;
 		}
 
-		codeExtended = extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0006D3E4, (char*)moduleHandle + 0x0006D40A);
+		codeExtended = extendCode(moduleHandle, 0x0006D3E4, (CODE1*)moduleHandle + 0x0006D40A);
 		break;
 		case MODULE_DIRECTOR_85:
 		for (DWORD i = 0;i < 2;i++) {
-			if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x00026818 + i)) {
-				callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-				return false;
+			if (!extendCode(moduleHandle, 0x00026818 + i)) {
+				goto error;
 			}
 		}
 
-		if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0005F406, (char*)moduleHandle + 0x0005F41C)) {
-			callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-			return false;
+		if (!extendCode(moduleHandle, 0x0005F406, (CODE1*)moduleHandle + 0x0005F41C)) {
+			goto error;
 		}
 
-		codeExtended = extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0005AF05, (char*)moduleHandle + 0x0005AF22);
+		codeExtended = extendCode(moduleHandle, 0x0005AF05, (CODE1*)moduleHandle + 0x0005AF22);
 		break;
 		case MODULE_DIRECTOR_851:
 		for (DWORD i = 0;i < 2;i++) {
-			if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0002686A + i)) {
-				callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-				return false;
+			if (!extendCode(moduleHandle, 0x0002686A + i)) {
+				goto error;
 			}
 		}
 
-		if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0005F43F, (char*)moduleHandle + 0x0005F455)) {
-			callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-			return false;
+		if (!extendCode(moduleHandle, 0x0005F43F, (CODE1*)moduleHandle + 0x0005F455)) {
+			goto error;
 		}
 
-		codeExtended = extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0005AF3E, (char*)moduleHandle + 0x0005AF5B);
+		codeExtended = extendCode(moduleHandle, 0x0005AF3E, (CODE1*)moduleHandle + 0x0005AF5B);
 		break;
 		case MODULE_DIRECTOR_9:
 		for (DWORD i = 0;i < 2;i++) {
-			if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x00026857 + i)) {
-				callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-				return false;
+			if (!extendCode(moduleHandle, 0x00026857 + i)) {
+				goto error;
 			}
 		}
 
-		if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0005F44C, (char*)moduleHandle + 0x0005F462)) {
-			callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-			return false;
+		if (!extendCode(moduleHandle, 0x0005F44C, (CODE1*)moduleHandle + 0x0005F462)) {
+			goto error;
 		}
 
-		codeExtended = extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0005AF48, (char*)moduleHandle + 0x0005AF65);
+		codeExtended = extendCode(moduleHandle, 0x0005AF48, (CODE1*)moduleHandle + 0x0005AF65);
 		break;
 		case MODULE_DIRECTOR_10:
 		for (DWORD i = 0;i < 2;i++) {
-			if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x000289A2 + i)) {
-				callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-				return false;
+			if (!extendCode(moduleHandle, 0x000289A2 + i)) {
+				goto error;
 			}
 		}
 
-		if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x000622C8, (char*)moduleHandle + 0x000622DE)) {
-			callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-			return false;
+		if (!extendCode(moduleHandle, 0x000622C8, (CODE1*)moduleHandle + 0x000622DE)) {
+			goto error;
 		}
 
-		codeExtended = extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0005DD13, (char*)moduleHandle + 0x0005DD30);
+		codeExtended = extendCode(moduleHandle, 0x0005DD13, (CODE1*)moduleHandle + 0x0005DD30);
 		break;
 		case MODULE_DIRECTOR_101:
 		for (DWORD i = 0; i < 2; i++) {
-			if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x00028E37 + i)) {
-				callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-				return false;
+			if (!extendCode(moduleHandle, 0x00028E37 + i)) {
+				goto error;
 			}
 		}
 
-		if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x000636D8, (char*)moduleHandle + 0x000636EE)) {
-			callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-			return false;
+		if (!extendCode(moduleHandle, 0x000636D8, (CODE1*)moduleHandle + 0x000636EE)) {
+			goto error;
 		}
 
-		codeExtended = extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0005EF2A, (char*)moduleHandle + 0x0005EF47);
+		codeExtended = extendCode(moduleHandle, 0x0005EF2A, (CODE1*)moduleHandle + 0x0005EF47);
 		break;
 		case MODULE_DIRECTOR_1011:
 		for (DWORD i = 0; i < 2; i++) {
-			if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x00028E84 + i)) {
-				callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-				return false;
+			if (!extendCode(moduleHandle, 0x00028E84 + i)) {
+				goto error;
 			}
 		}
 
-		if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0006372C, (char*)moduleHandle + 0x00063742)) {
-			callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-			return false;
+		if (!extendCode(moduleHandle, 0x0006372C, (CODE1*)moduleHandle + 0x00063742)) {
+			goto error;
 		}
 
-		codeExtended = extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0005EF82, (char*)moduleHandle + 0x0005EF9F);
+		codeExtended = extendCode(moduleHandle, 0x0005EF82, (CODE1*)moduleHandle + 0x0005EF9F);
 		break;
 		case MODULE_DIRECTOR_11:
 		for (DWORD i = 0;i < 2;i++) {
-			if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x000345FE + i)) {
-				callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-				return false;
+			if (!extendCode(moduleHandle, 0x000345FE + i)) {
+				goto error;
 			}
 		}
 
-		if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0008189D, (char*)moduleHandle + 0x000818BD)) {
-			callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-			return false;
+		if (!extendCode(moduleHandle, 0x0008189D, (CODE1*)moduleHandle + 0x000818BD)) {
+			goto error;
 		}
 
-		codeExtended = extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x00076FBC, (char*)moduleHandle + 0x00076FE1);
+		codeExtended = extendCode(moduleHandle, 0x00076FBC, (CODE1*)moduleHandle + 0x00076FE1);
 		break;
 		case MODULE_DIRECTOR_1103:
 		for (DWORD i = 0;i < 2;i++) {
-			if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0003448E + i)) {
-				callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-				return false;
+			if (!extendCode(moduleHandle, 0x0003448E + i)) {
+				goto error;
 			}
 		}
 
-		if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0008176D, (char*)moduleHandle + 0x0008178D)) {
-			callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-			return false;
+		if (!extendCode(moduleHandle, 0x0008176D, (CODE1*)moduleHandle + 0x0008178D)) {
+			goto error;
 		}
 
-		codeExtended = extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x00076E8C, (char*)moduleHandle + 0x00076EB1);
+		codeExtended = extendCode(moduleHandle, 0x00076E8C, (CODE1*)moduleHandle + 0x00076EB1);
 		break;
 		case MODULE_DIRECTOR_115:
 		for (DWORD i = 0;i < 2;i++) {
-			if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x00034C4B + i)) {
-				callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-				return false;
+			if (!extendCode(moduleHandle, 0x00034C4B + i)) {
+				goto error;
 			}
 		}
 
-		if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0008413D, (char*)moduleHandle + 0x0008415D)) {
-			callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-			return false;
+		if (!extendCode(moduleHandle, 0x0008413D, (CODE1*)moduleHandle + 0x0008415D)) {
+			goto error;
 		}
 
-		codeExtended = extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x000796DC, (char*)moduleHandle + 0x00079701);
+		codeExtended = extendCode(moduleHandle, 0x000796DC, (CODE1*)moduleHandle + 0x00079701);
 		break;
 		case MODULE_DIRECTOR_1158:
 		for (DWORD i = 0;i < 2;i++) {
-			if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x000351AE + i)) {
-				callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-				return false;
+			if (!extendCode(moduleHandle, 0x000351AE + i)) {
+				goto error;
 			}
 		}
 
-		if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x00084A9D, (char*)moduleHandle + 0x00084ABD)) {
-			callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-			return false;
+		if (!extendCode(moduleHandle, 0x00084A9D, (CODE1*)moduleHandle + 0x00084ABD)) {
+			goto error;
 		}
 
-		codeExtended = extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x00079F6C, (char*)moduleHandle + 0x00079F91);
+		codeExtended = extendCode(moduleHandle, 0x00079F6C, (CODE1*)moduleHandle + 0x00079F91);
 		break;
 		case MODULE_DIRECTOR_1159:
 		for (DWORD i = 0;i < 2;i++) {
-			if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x000353FE + i)) {
-				callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-				return false;
+			if (!extendCode(moduleHandle, 0x000353FE + i)) {
+				goto error;
 			}
 		}
 
-		if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x000855BD, (char*)moduleHandle + 0x000855DD)) {
-			callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-			return false;
+		if (!extendCode(moduleHandle, 0x000855BD, (CODE1*)moduleHandle + 0x000855DD)) {
+			goto error;
 		}
 
-		codeExtended = extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0007AA6C, (char*)moduleHandle + 0x0007AA91);
+		codeExtended = extendCode(moduleHandle, 0x0007AA6C, (CODE1*)moduleHandle + 0x0007AA91);
 		break;
 		case MODULE_DIRECTOR_12:
 		for (DWORD i = 0;i < 2;i++) {
-			if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x0008673C + i)) {
-				callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-				return false;
+			if (!extendCode(moduleHandle, 0x0008673C + i)) {
+				goto error;
 			}
 		}
 
-		if (!extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x000D431D, (char*)moduleHandle + 0x000D433C)) {
-			callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
-			return false;
+		if (!extendCode(moduleHandle, 0x000D431D, (CODE1*)moduleHandle + 0x000D433C)) {
+			goto error;
 		}
 
-		codeExtended = extendCode(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, moduleHandle, 0x000C9B51, (char*)moduleHandle + 0x000C9B71);
+		codeExtended = extendCode(moduleHandle, 0x000C9B51, (CODE1*)moduleHandle + 0x000C9B71);
 	}
 
 	// in case we failed and didn't catch it somehow
 	if (!codeExtended) {
-		callLingoAlertAntivirus(moaMmValueInterfacePointer, moaDrMovieInterfacePointer, "Failed to Extend Code");
+		error:
+		callLingoAlertAntivirus("Failed to Extend Code", moaDrMovieInterfacePointer, moaMmValueInterfacePointer);
 		return false;
 	}
-	// cleanup
 	return true;
 }
 /* End Extender */

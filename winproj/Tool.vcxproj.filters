@@ -26,9 +26,21 @@
     <ClInclude Include="..\source\Tool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\source\shared.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\Extender.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\source\Tool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\shared.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\Extender.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
