@@ -122,7 +122,7 @@ bool testCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtual
 	}
 
 	if (!testedCode) {
-		//showLastError("code must not be NULL");
+		//showLastError("testedCode must not be NULL");
 		return false;
 	}
 
