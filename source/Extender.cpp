@@ -9,33 +9,55 @@ bool testSectionAddress(HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VI
 		return false;
 	}
 
-	PIMAGE_NT_HEADERS imageNTHeaders = ImageNtHeader(moduleHandle);
+	PIMAGE_DOS_HEADER imageDOSHeaderPointer = (PIMAGE_DOS_HEADER)moduleHandle;
 
-	if (!imageNTHeaders) {
-		//showLastError("Failed to Image NT Header");
+	if (!imageDOSHeaderPointer) {
+		//showLastError("imageDOSHeaderPointer must not be NULL");
 		return false;
 	}
 
-	PIMAGE_SECTION_HEADER imageSectionHeader = (PIMAGE_SECTION_HEADER)(imageNTHeaders + 1);
+	if (imageDOSHeaderPointer->e_magic != IMAGE_DOS_SIGNATURE) {
+		//showLastError("e_magic must be IMAGE_DOS_SIGNATURE");
+		goto error;
+	}
 
-	if (!imageSectionHeader) {
-		//showLastError("imageSectionHeader must not be NULL");
-		imageNTHeaders = NULL;
+	PIMAGE_NT_HEADERS imageNTHeadersPointer = ImageNtHeader(imageDOSHeaderPointer);
+
+	if (!imageNTHeadersPointer) {
+		//showLastError("imageNTHeadersPointer must not be NULL");
+		goto error;
+	}
+
+	if (imageNTHeadersPointer->Signature != IMAGE_NT_SIGNATURE) {
+		//showLastError("Signature must be IMAGE_NT_SIGNATURE");
+		goto error2;
+	}
+
+	PIMAGE_SECTION_HEADER imageSectionHeaderPointer = (PIMAGE_SECTION_HEADER)(imageNTHeadersPointer + 1);
+
+	if (!imageSectionHeaderPointer) {
+		//showLastError("imageSectionHeaderPointer must not be NULL");
 		return false;
 	}
 
-	for (WORD i = 0; i < imageNTHeaders->FileHeader.NumberOfSections; i++) {
-		if (virtualAddress >= (VIRTUAL_ADDRESS)moduleHandle + imageSectionHeader->VirtualAddress && virtualAddress + virtualSize < (VIRTUAL_ADDRESS)moduleHandle + imageSectionHeader->VirtualAddress + imageSectionHeader->Misc.VirtualSize) {
-			imageNTHeaders = NULL;
-			imageSectionHeader = NULL;
+	VIRTUAL_ADDRESS moduleVirtualAddress = (VIRTUAL_ADDRESS)moduleHandle;
+
+	for (WORD i = 0; i < imageNTHeadersPointer->FileHeader.NumberOfSections; i++) {
+		if (virtualAddress >= moduleVirtualAddress + imageSectionHeaderPointer->VirtualAddress && virtualAddress + virtualSize < moduleVirtualAddress + imageSectionHeaderPointer->VirtualAddress + imageSectionHeaderPointer->Misc.VirtualSize) {
+			imageSectionHeaderPointer = NULL;
+			imageNTHeadersPointer = NULL;
+			imageDOSHeaderPointer = NULL;
 			return true;
 		}
 
-		imageSectionHeader++;
+		imageSectionHeaderPointer++;
 	}
 
-	imageNTHeaders = NULL;
-	imageSectionHeader = NULL;
+	imageSectionHeaderPointer = NULL;
+	error2:
+	imageNTHeadersPointer = NULL;
+	error:
+	imageDOSHeaderPointer = NULL;
 	return false;
 }
 
