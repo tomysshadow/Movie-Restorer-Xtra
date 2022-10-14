@@ -53,3 +53,4 @@ inline bool memoryShift(size_t bufferSize, void* buffer, size_t sourceSize, void
 
 bool showLastError(LPCSTR errorMessage);
 BOOL terminateCurrentProcess();
+bool testSectionAddress(HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VIRTUAL_SIZE virtualSize = 1);

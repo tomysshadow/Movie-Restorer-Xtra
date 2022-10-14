@@ -1,65 +1,6 @@
 #include "shared.h"
 #include "Extender.h"
 #include <windows.h>
-#include <Dbghelp.h>
-
-bool testSectionAddress(HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VIRTUAL_SIZE virtualSize) {
-	if (!moduleHandle) {
-		//showLastError("moduleHandle must not be NULL");
-		return false;
-	}
-
-	PIMAGE_DOS_HEADER imageDOSHeaderPointer = (PIMAGE_DOS_HEADER)moduleHandle;
-
-	if (!imageDOSHeaderPointer) {
-		//showLastError("imageDOSHeaderPointer must not be NULL");
-		return false;
-	}
-
-	if (imageDOSHeaderPointer->e_magic != IMAGE_DOS_SIGNATURE) {
-		//showLastError("e_magic must be IMAGE_DOS_SIGNATURE");
-		goto error;
-	}
-
-	PIMAGE_NT_HEADERS imageNTHeadersPointer = ImageNtHeader(imageDOSHeaderPointer);
-
-	if (!imageNTHeadersPointer) {
-		//showLastError("imageNTHeadersPointer must not be NULL");
-		goto error;
-	}
-
-	if (imageNTHeadersPointer->Signature != IMAGE_NT_SIGNATURE) {
-		//showLastError("Signature must be IMAGE_NT_SIGNATURE");
-		goto error2;
-	}
-
-	PIMAGE_SECTION_HEADER imageSectionHeaderPointer = (PIMAGE_SECTION_HEADER)(imageNTHeadersPointer + 1);
-
-	if (!imageSectionHeaderPointer) {
-		//showLastError("imageSectionHeaderPointer must not be NULL");
-		return false;
-	}
-
-	VIRTUAL_ADDRESS moduleVirtualAddress = (VIRTUAL_ADDRESS)moduleHandle;
-
-	for (WORD i = 0; i < imageNTHeadersPointer->FileHeader.NumberOfSections; i++) {
-		if (virtualAddress >= moduleVirtualAddress + imageSectionHeaderPointer->VirtualAddress && virtualAddress + virtualSize <= moduleVirtualAddress + imageSectionHeaderPointer->VirtualAddress + imageSectionHeaderPointer->Misc.VirtualSize) {
-			imageSectionHeaderPointer = NULL;
-			imageNTHeadersPointer = NULL;
-			imageDOSHeaderPointer = NULL;
-			return true;
-		}
-
-		imageSectionHeaderPointer++;
-	}
-
-	imageSectionHeaderPointer = NULL;
-	error2:
-	imageNTHeadersPointer = NULL;
-	error:
-	imageDOSHeaderPointer = NULL;
-	return false;
-}
 
 bool unprotectCode(HMODULE moduleHandle, VIRTUAL_ADDRESS codeVirtualAddress, VIRTUAL_SIZE codeVirtualSize, DWORD &oldProtect) {
 	if (!moduleHandle) {
