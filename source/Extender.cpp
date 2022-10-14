@@ -142,7 +142,7 @@ bool testCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtual
 		return false;
 	}
 
-	bool result = memoryEqual((void*)codePointer, testedCode, codeVirtualSize);
+	bool result = memoryEqual(codePointer, testedCode, codeVirtualSize);
 
 	codePointer = NULL;
 
@@ -181,8 +181,8 @@ bool extendCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtu
 		return false;
 	}
 
-	const CODE1 INSTRUCTIONS_JMP = 0xE9;
 	const CODE1 INSTRUCTIONS_CALL = 0xE8;
+	const CODE1 INSTRUCTIONS_JMP = 0xE9;
 
 	*(VIRTUAL_ADDRESS*)(codePointer + 1) = (VIRTUAL_ADDRESS)extendedCode - codeVirtualAddress - CODE_VIRTUAL_SIZE;
 	*codePointer = call ? INSTRUCTIONS_CALL : INSTRUCTIONS_JMP;

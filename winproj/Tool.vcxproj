@@ -132,12 +132,6 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\..\..\..\Include\win32\dversion.rc">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">\Bld\rx\!output\XDK\Include\win32;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">\Bld\rx\!output\XDK\Include\win32;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ResourceCompile>
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="..\source\Extender.cpp" />
     <ClCompile Include="..\source\shared.cpp" />
     <ClCompile Include="..\source\Tool.cpp">
@@ -152,11 +146,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\source\Extender.h" />
+    <ClInclude Include="..\source\resource.h" />
     <ClInclude Include="..\source\shared.h" />
     <ClInclude Include="..\source\Tool.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\README.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\source\dversion.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
