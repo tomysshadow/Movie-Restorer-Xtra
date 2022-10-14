@@ -43,7 +43,7 @@ bool testSectionAddress(HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VI
 	VIRTUAL_ADDRESS moduleVirtualAddress = (VIRTUAL_ADDRESS)moduleHandle;
 
 	for (WORD i = 0; i < imageNTHeadersPointer->FileHeader.NumberOfSections; i++) {
-		if (virtualAddress >= moduleVirtualAddress + imageSectionHeaderPointer->VirtualAddress && virtualAddress + virtualSize < moduleVirtualAddress + imageSectionHeaderPointer->VirtualAddress + imageSectionHeaderPointer->Misc.VirtualSize) {
+		if (virtualAddress >= moduleVirtualAddress + imageSectionHeaderPointer->VirtualAddress && virtualAddress + virtualSize <= moduleVirtualAddress + imageSectionHeaderPointer->VirtualAddress + imageSectionHeaderPointer->Misc.VirtualSize) {
 			imageSectionHeaderPointer = NULL;
 			imageNTHeadersPointer = NULL;
 			imageDOSHeaderPointer = NULL;
