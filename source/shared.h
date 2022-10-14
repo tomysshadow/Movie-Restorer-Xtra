@@ -32,7 +32,7 @@ inline bool memoryEqual(const void* buffer, const void* buffer2, size_t bufferSi
 }
 
 inline bool memoryShift(size_t bufferSize, void* buffer, size_t sourceSize, void* source, size_t shift, bool direction) {
-	if (source < buffer || (char*)source + sourceSize >= (char*)buffer + bufferSize) {
+	if (source < buffer || (char*)source + sourceSize > (char*)buffer + bufferSize) {
 		return false;
 	}
 
@@ -45,7 +45,7 @@ inline bool memoryShift(size_t bufferSize, void* buffer, size_t sourceSize, void
 		destination -= shift;
 	}
 
-	if (destination < buffer || destination + destinationSize >= (char*)buffer + bufferSize) {
+	if (destination < buffer || destination + destinationSize > (char*)buffer + bufferSize) {
 		return false;
 	}
 	return !memmove_s(destination, destinationSize, source, sourceSize);
