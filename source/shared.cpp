@@ -4,7 +4,7 @@
 #include <windows.h>
 #include <Dbghelp.h>
 
-static LPCSTR MESSAGE_BOX_CAPTION = "LeechProtectionRemovalHelp Error";
+static LPCSTR MESSAGE_BOX_CAPTION = "Movie Restorer Error";
 
 bool showLastError(LPCSTR errorMessage) {
 	if (!errorMessage) {

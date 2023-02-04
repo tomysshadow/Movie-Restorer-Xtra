@@ -139,7 +139,7 @@ inline bool callLingoAlertXtraMissing(ConstPMoaChar messageString, PIMoaDrMovie 
 		return false;
 	}
 
-	if (!callLingoAlert("An Xtra that the LeechProtectionRemovalHelp Xtra requires, such as the NetLingo Xtra or Shockwave 3D Asset Xtra, is missing.", moaDrMovieInterfacePointer, moaMmValueInterfacePointer)) {
+	if (!callLingoAlert("An Xtra that the Movie Restorer Xtra requires, such as the NetLingo Xtra or Shockwave 3D Asset Xtra, is missing.", moaDrMovieInterfacePointer, moaMmValueInterfacePointer)) {
 		return false;
 	}
 	return true;
@@ -154,7 +154,7 @@ inline bool callLingoAlertIncompatibleDirectorVersion(ConstPMoaChar messageStrin
 		return false;
 	}
 
-	if (!callLingoAlert("The LeechProtectionRemovalHelp Xtra has determined it is incompatible with this Director version.", moaDrMovieInterfacePointer, moaMmValueInterfacePointer)) {
+	if (!callLingoAlert("The Movie Restorer Xtra has determined it is incompatible with this Director version.", moaDrMovieInterfacePointer, moaMmValueInterfacePointer)) {
 		return false;
 	}
 	return true;
@@ -169,7 +169,7 @@ inline bool callLingoAlertAntivirus(ConstPMoaChar messageString, PIMoaDrMovie mo
 		return false;
 	}
 
-	if (!callLingoAlert("Your antivirus may be preventing the LeechProtectionRemovalHelp Xtra from working properly.", moaDrMovieInterfacePointer, moaMmValueInterfacePointer)) {
+	if (!callLingoAlert("Your antivirus may be preventing the Movie Restorer Xtra from working properly.", moaDrMovieInterfacePointer, moaMmValueInterfacePointer)) {
 		return false;
 	}
 	return true;
