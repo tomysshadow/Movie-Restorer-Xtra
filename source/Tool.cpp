@@ -55,7 +55,10 @@ STDMETHODIMP_(MoaError) MoaCreate_TStdXtra(TStdXtra* This) {
 	ThrowNull(This);
 
 	ThrowErr(This->pCallback->QueryInterface(&IID_IMoaMmValue, (PPMoaVoid)&This->moaMmValueInterfacePointer));
+	ThrowNull(This->moaMmValueInterfacePointer);
+
 	ThrowErr(This->pCallback->QueryInterface(&IID_IMoaDrPlayer, (PPMoaVoid)&This->moaDrPlayerInterfacePointer));
+	ThrowNull(This->moaDrPlayerInterfacePointer);
 
 	moa_catch
 	moa_catch_end
@@ -70,14 +73,15 @@ STDMETHODIMP_(void) MoaDestroy_TStdXtra(TStdXtra* This) {
 	ThrowNull(This);
 
 	if (This->moaMmValueInterfacePointer) {
-		ThrowErr(This->moaMmValueInterfacePointer->Release());
+		This->moaMmValueInterfacePointer->Release();
 		This->moaMmValueInterfacePointer = NULL;
 	}
 
 	if (This->moaDrPlayerInterfacePointer) {
-		ThrowErr(This->moaDrPlayerInterfacePointer->Release());
+		This->moaDrPlayerInterfacePointer->Release();
 		This->moaDrPlayerInterfacePointer = NULL;
 	}
+
 	moa_catch
 	moa_catch_end
 	// we use moa_try_end_void instead of moa_try_end here since this method returns a void type
@@ -106,25 +110,27 @@ END_DEFINE_CLASS_INTERFACE
 // pass in the arguments for it, which are
 // pointers that we can point to data
 // that will tell Director what this Xtra does
-STDMETHODIMP TStdXtra_IMoaRegister::Register(PIMoaCache pCache, PIMoaXtraEntryDict pXtraDict) {
+STDMETHODIMP TStdXtra_IMoaRegister::Register(PIMoaCache cacheInterfacePointer, PIMoaXtraEntryDict xtraEntryDictInterfacePointer) {
 	moa_try
 
-	ThrowNull(pCache);
-	ThrowNull(pXtraDict);
+	ThrowNull(cacheInterfacePointer);
+	ThrowNull(xtraEntryDictInterfacePointer);
 
 	// register the Lingo Xtra
-	PIMoaRegistryEntryDict pReg = NULL;
-	ThrowErr(pCache->AddRegistryEntry(pXtraDict, &CLSID_TStdXtra, &IID_IMoaMmXTool, &pReg));
+	PIMoaRegistryEntryDict registryEntryDictInterfacePointer = NULL;
+	ThrowErr(cacheInterfacePointer->AddRegistryEntry(xtraEntryDictInterfacePointer, &CLSID_TStdXtra, &IID_IMoaMmXTool, &registryEntryDictInterfacePointer));
+	ThrowNull(registryEntryDictInterfacePointer);
 
 	// register Standard Tool Entries
-	const char* nameStr = "Enable";
-	const char* catStr = "Movie Restorer 1.5.4";
+	const char* displayNameString = "Enable";
+	const char* displayCategoryString = "Movie Restorer 1.5.5";
 	MoaBoolParam alwaysEnabled = TRUE;
 
 	// private entries
-	ThrowErr(pReg->Put(kMoaMmDictType_DisplayNameString, nameStr, 0, kMoaMmDictKey_DisplayNameString));
-	ThrowErr(pReg->Put(kMoaMmDictType_DisplayCategoryString, catStr, 0, kMoaMmDictKey_DisplayCategoryString));
-	ThrowErr(pReg->Put(kMoaDrDictType_AlwaysEnabled, &alwaysEnabled, 0, kMoaDrDictKey_AlwaysEnabled));
+	ThrowErr(registryEntryDictInterfacePointer->Put(kMoaMmDictType_DisplayNameString, displayNameString, 0, kMoaMmDictKey_DisplayNameString));
+	ThrowErr(registryEntryDictInterfacePointer->Put(kMoaMmDictType_DisplayCategoryString, displayCategoryString, 0, kMoaMmDictKey_DisplayCategoryString));
+	ThrowErr(registryEntryDictInterfacePointer->Put(kMoaDrDictType_AlwaysEnabled, &alwaysEnabled, 0, kMoaDrDictKey_AlwaysEnabled));
+
 	moa_catch
 	moa_catch_end
 	moa_try_end
@@ -232,27 +238,30 @@ MoaError TStdXtra_IMoaMmXTool::XToolExtender(PIMoaDrMovie moaDrMovieInterfacePoi
 		terminateCurrentProcess();
 		Throw(kMoaErr_InternalError);
 	}
+
 	moa_catch
 	moa_catch_end
 	moa_try_end
 }
 
 MoaError TStdXtra_IMoaMmXTool::XToolExtender() {
+	PIMoaDrMovie moaDrMovieInterfacePointer = NULL;
+
 	moa_try
 
 	// get the Active Movie (so we can call a Lingo Handler in it if we need to)
-	PIMoaDrMovie moaDrMovieInterfacePointer = NULL;
-
 	ThrowErr(pObj->moaDrPlayerInterfacePointer->GetActiveMovie(&moaDrMovieInterfacePointer));
 	
 	ThrowErr(XToolExtender(moaDrMovieInterfacePointer));
 
 	moa_catch
 	moa_catch_end
+
 	// GOTTA SWEEP SWEEP SWEEP
 	if (moaDrMovieInterfacePointer) {
 		moaDrMovieInterfacePointer->Release();
 	}
+
 	moa_try_end
 }
 /* End Xtra */

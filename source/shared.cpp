@@ -39,19 +39,19 @@ bool testSectionAddress(HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VI
 
 	if (imageDOSHeaderPointer->e_magic != IMAGE_DOS_SIGNATURE) {
 		//showLastError("e_magic must be IMAGE_DOS_SIGNATURE");
-		goto error;
+		return false;
 	}
 
 	PIMAGE_NT_HEADERS imageNTHeadersPointer = ImageNtHeader(imageDOSHeaderPointer);
 
 	if (!imageNTHeadersPointer) {
 		//showLastError("imageNTHeadersPointer must not be NULL");
-		goto error;
+		return false;
 	}
 
 	if (imageNTHeadersPointer->Signature != IMAGE_NT_SIGNATURE) {
 		//showLastError("Signature must be IMAGE_NT_SIGNATURE");
-		goto error2;
+		return false;
 	}
 
 	PIMAGE_SECTION_HEADER imageSectionHeaderPointer = (PIMAGE_SECTION_HEADER)(imageNTHeadersPointer + 1);
@@ -64,20 +64,12 @@ bool testSectionAddress(HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VI
 	VIRTUAL_ADDRESS moduleVirtualAddress = (VIRTUAL_ADDRESS)moduleHandle;
 
 	for (WORD i = 0; i < imageNTHeadersPointer->FileHeader.NumberOfSections; i++) {
-		if (virtualAddress >= moduleVirtualAddress + imageSectionHeaderPointer->VirtualAddress && virtualAddress + virtualSize <= moduleVirtualAddress + imageSectionHeaderPointer->VirtualAddress + imageSectionHeaderPointer->Misc.VirtualSize) {
-			imageSectionHeaderPointer = NULL;
-			imageNTHeadersPointer = NULL;
-			imageDOSHeaderPointer = NULL;
+		if (virtualAddress >= moduleVirtualAddress + imageSectionHeaderPointer->VirtualAddress
+			&& virtualAddress + virtualSize <= moduleVirtualAddress + imageSectionHeaderPointer->VirtualAddress + imageSectionHeaderPointer->Misc.VirtualSize) {
 			return true;
 		}
 
 		imageSectionHeaderPointer++;
 	}
-
-	imageSectionHeaderPointer = NULL;
-	error2:
-	imageNTHeadersPointer = NULL;
-	error:
-	imageDOSHeaderPointer = NULL;
 	return false;
 }

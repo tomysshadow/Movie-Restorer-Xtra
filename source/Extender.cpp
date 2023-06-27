@@ -85,8 +85,6 @@ bool testCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtual
 
 	bool result = memoryEqual(codePointer, testedCode, codeVirtualSize);
 
-	codePointer = NULL;
-
 	if (!protectCode(moduleHandle, codeVirtualAddress, codeVirtualSize, oldProtect)) {
 		//showLastError("Failed to Protect Code");
 		return false;
@@ -127,7 +125,6 @@ bool extendCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtu
 
 	*(VIRTUAL_ADDRESS*)(codePointer + 1) = (VIRTUAL_ADDRESS)extendedCode - codeVirtualAddress - CODE_VIRTUAL_SIZE;
 	*codePointer = call ? INSTRUCTIONS_CALL : INSTRUCTIONS_JMP;
-	codePointer = NULL;
 
 	if (!protectCode(moduleHandle, codeVirtualAddress, CODE_VIRTUAL_SIZE, oldProtect)) {
 		//showLastError("Failed to Protect Code");
@@ -167,7 +164,6 @@ bool extendCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtu
 	const CODE1 INSTRUCTIONS_NOP = 0x90;
 
 	*codePointer = INSTRUCTIONS_NOP;
-	codePointer = NULL;
 
 	if (!protectCode(moduleHandle, codeVirtualAddress, CODE_VIRTUAL_SIZE, oldProtect)) {
 		//showLastError("Failed to Protect Code");

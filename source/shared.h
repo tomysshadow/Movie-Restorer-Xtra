@@ -32,6 +32,8 @@ inline bool memoryEqual(const void* buffer, const void* buffer2, size_t bufferSi
 }
 
 inline bool memoryShift(size_t bufferSize, void* buffer, size_t sourceSize, void* source, size_t shift, bool direction) {
+	#pragma warning(push)
+	#pragma warning(disable : 4133)
 	if (source < buffer || (char*)source + sourceSize > (char*)buffer + bufferSize) {
 		return false;
 	}
@@ -49,6 +51,7 @@ inline bool memoryShift(size_t bufferSize, void* buffer, size_t sourceSize, void
 		return false;
 	}
 	return !memmove_s(destination, destinationSize, source, sourceSize);
+	#pragma warning(pop)
 }
 
 bool showLastError(LPCSTR errorMessage);
