@@ -123,7 +123,7 @@ STDMETHODIMP TStdXtra_IMoaRegister::Register(PIMoaCache cacheInterfacePointer, P
 
 	// register Standard Tool Entries
 	const char* displayNameString = "Enable";
-	const char* displayCategoryString = "Movie Restorer 1.5.5";
+	const char* displayCategoryString = "Movie Restorer 1.5.6";
 	MoaBoolParam alwaysEnabled = TRUE;
 
 	// private entries
