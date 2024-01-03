@@ -1,4 +1,4 @@
-LIBRARY   Tool
+LIBRARY   "Movie Restorer.x32"
 EXPORTS
 			DllGetClassObject	PRIVATE
 			DllGetInterface	PRIVATE

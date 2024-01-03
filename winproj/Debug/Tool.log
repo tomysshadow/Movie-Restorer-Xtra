@@ -13,5 +13,4 @@ C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\IDE\VC\VCT
 C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(1217,5): warning MSB8012: TargetExt(.dll) does not match the Linker's OutputFile property value (.x32). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
 Extender.obj : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/SAFESEH' specification
      Creating library .\Debug/Tool.lib and object .\Debug/Tool.exp
-Tool.exp : warning LNK4070: /OUT:Tool.dll directive in .EXP differs from output filename 'C:\Users\Anthony\Documents\Visual Studio 2017\Projects\XDK_win\XDK\Examples\Script\Movie Restorer Xtra\winproj\Debug\Movie Restorer.x32'; ignoring directive
   Tool.vcxproj -> C:\Users\Anthony\Documents\Visual Studio 2017\Projects\XDK_win\XDK\Examples\Script\Movie Restorer Xtra\winproj\Debug\Movie Restorer.dll

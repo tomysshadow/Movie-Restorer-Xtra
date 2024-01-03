@@ -83,7 +83,7 @@ bool testCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtual
 		return false;
 	}
 
-	bool result = memoryEqual(codePointer, testedCode, codeVirtualSize);
+	bool result = memoryEquals(codePointer, testedCode, codeVirtualSize);
 
 	if (!protectCode(moduleHandle, codeVirtualAddress, codeVirtualSize, oldProtect)) {
 		//showLastError("Failed to Protect Code");
