@@ -64,8 +64,8 @@ EXTERN_BEGIN_DEFINE_CLASS_INTERFACE(TStdXtra, IMoaMmXTool)
 	EXTERN_DEFINE_METHOD(MoaError, Invoke, ())
 	EXTERN_DEFINE_METHOD(MoaError, GetEnabled, (PMoaDrEnabledState))
 	private:
-	EXTERN_DEFINE_METHOD(MoaError, XToolExtender, (PIMoaDrMovie))
-	EXTERN_DEFINE_METHOD(MoaError, XToolExtender, ())
+	EXTERN_DEFINE_METHOD(MoaError, Extender, (PIMoaDrMovie))
+	EXTERN_DEFINE_METHOD(MoaError, Extender, ())
 EXTERN_END_DEFINE_CLASS_INTERFACE
 
 
