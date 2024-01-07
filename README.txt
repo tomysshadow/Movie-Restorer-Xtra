@@ -38,4 +38,4 @@ Tested With
 
 
 Usage
-	In Director, go to Xtras > Movie Restorer 1.5.4 > Enable.
+	In Director, go to Xtras > Movie Restorer 1.5.6 > Enable.
